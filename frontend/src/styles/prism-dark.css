@@ -1,0 +1,64 @@
+/* Minimal Prism light theme for code viewer */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #383a42;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  tab-size: 4;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #a0a1a7;
+}
+
+.token.punctuation {
+  color: #383a42;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol {
+  color: #986801;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin {
+  color: #50a14f;
+}
+
+.token.operator,
+.token.entity,
+.token.url {
+  color: #0184bc;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #a626a4;
+}
+
+.token.function,
+.token.class-name {
+  color: #4078f2;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #e45649;
+}
+
+.token.decorator {
+  color: #a626a4;
+}

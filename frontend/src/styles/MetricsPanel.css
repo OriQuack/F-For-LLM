@@ -1,0 +1,51 @@
+.metrics-panel {
+  padding: 10px 12px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.metrics-panel h3 {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  min-width: 120px;
+  text-align: right;
+}
+
+.metric-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #5c6bc0;
+  transition: width 0.2s;
+}
+
+.metric-value {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  min-width: 40px;
+  text-align: right;
+}

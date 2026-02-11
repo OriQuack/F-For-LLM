@@ -1,0 +1,11 @@
+data/output/*
+data/input/*
+
+.vscode/
+.claude/
+*__pycache__
+venv/
+*.env
+*.png
+*.log
+

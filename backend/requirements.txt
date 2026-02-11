@@ -1,0 +1,7 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+polars==0.19.19
+pydantic==2.5.0
+numpy>=1.25.2
+scikit-learn>=1.6.0
+torch>=2.0.0

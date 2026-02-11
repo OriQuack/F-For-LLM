@@ -1,0 +1,38 @@
+.convergence-indicator {
+  height: 50px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.convergence-indicator svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sparkline-path {
+  fill: none;
+  stroke: #90CAF9;
+  stroke-width: 1.5;
+}
+
+.sparkline-dot {
+  fill: #90CAF9;
+}
+
+.ref-line {
+  stroke: var(--color-border);
+  stroke-dasharray: 2 2;
+  stroke-width: 0.5;
+}
+
+.convergence-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}

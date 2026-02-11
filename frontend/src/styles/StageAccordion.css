@@ -1,0 +1,75 @@
+.stage-accordion {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.stage-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.stage-tab {
+  flex: 1;
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.stage-tab:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.stage-tab.active {
+  color: var(--color-text);
+  border-bottom-color: #4CAF50;
+}
+
+.stage-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.stage-controls label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.stage-controls label input {
+  margin: 0;
+}
+
+.bootstrap-toggle {
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+}
+
+.bootstrap-toggle.active {
+  background: var(--color-human);
+  color: white;
+  border-color: var(--color-human);
+}
+
+.item-list-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}

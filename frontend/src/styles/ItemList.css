@@ -1,0 +1,68 @@
+.item-list {
+  height: 100%;
+  overflow: auto;
+}
+
+.item-list-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  gap: 6px;
+  transition: background 0.1s;
+}
+
+.item-list-row:hover {
+  background: var(--color-surface-hover);
+}
+
+.item-list-row.current {
+  background: rgba(76, 175, 80, 0.15);
+  border-left: 3px solid var(--color-human);
+  padding-left: 7px;
+}
+
+.item-list-row.tagged-selected {
+  border-left: 3px solid var(--color-human);
+  padding-left: 7px;
+}
+
+.item-list-row.tagged-rejected {
+  border-left: 3px solid var(--color-llm);
+  padding-left: 7px;
+}
+
+.item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.item-type-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.item-score {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  min-width: 45px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.item-count-badge {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  padding: 4px 10px;
+  text-align: center;
+}

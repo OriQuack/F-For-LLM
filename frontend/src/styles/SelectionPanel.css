@@ -1,0 +1,38 @@
+.selection-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px 8px 24px 80px;
+  gap: 8px;
+}
+
+.commit-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.commit-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.commit-circle:hover {
+  border-color: var(--color-text);
+}
+
+.commit-circle.active {
+  border-color: var(--color-human);
+  background: rgba(76, 175, 80, 0.2);
+}

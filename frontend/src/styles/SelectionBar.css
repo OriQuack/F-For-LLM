@@ -1,0 +1,138 @@
+/* ============================================================================
+   SELECTION STATE BAR
+   ============================================================================ */
+
+.selection-state-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ============================================================================
+   LEFT-SIDE LABELS - Sankey-style labels positioned to left of segments
+   ============================================================================ */
+
+.selection-state-bar__left-label {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-right: 6px;
+  pointer-events: none;
+  z-index: 150;
+}
+
+/* Sankey-style label text - black with white stroke border */
+.selection-state-bar__label-name,
+.selection-state-bar__label-count {
+  font-weight: 600;
+  color: #000000;
+  -webkit-text-stroke: 3px #ffffff;
+  paint-order: stroke fill;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.selection-state-bar__label-name {
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.selection-state-bar__label-auto {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.8;
+  align-self: flex-end;
+}
+
+.selection-state-bar__label-count {
+  font-size: 12px;
+}
+
+/* Main Bar */
+.selection-state-bar__bar {
+  display: flex;
+  overflow: visible;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 150;
+}
+
+.selection-state-bar__segment {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.selection-state-bar__segment:last-child {
+  border-bottom: none;
+}
+
+/* Interactive segments (with hover handler) */
+.selection-state-bar__segment--interactive {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.selection-state-bar__segment--interactive:hover {
+  filter: brightness(0.92);
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.selection-state-bar__segment--interactive:active {
+  filter: brightness(0.88);
+}
+
+/* Segment Labels */
+.selection-state-bar__segment-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
+  -webkit-text-stroke: 3px #ffffff;
+  paint-order: stroke fill;
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================================
+   PREVIEW OVERLAY
+   ============================================================================ */
+
+.selection-state-bar__preview-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Click feedback ripple effect */
+@keyframes clickRipple {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
+  100% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+}
+
+.selection-state-bar__segment--interactive:active::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  animation: clickRipple 0.6s ease-out;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}

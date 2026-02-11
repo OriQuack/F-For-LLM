@@ -1,0 +1,83 @@
+:root {
+  --color-human: #4CAF50;
+  --color-human-auto: #81C784;
+  --color-llm: #FF9800;
+  --color-llm-auto: #FFB74D;
+  --color-unsure: #E0E0E0;
+  --color-bg: #ffffff;
+  --color-surface: #f5f5f5;
+  --color-surface-hover: #eeeeee;
+  --color-border: #e0e0e0;
+  --color-text: #212121;
+  --color-text-secondary: #757575;
+  --radius: 6px;
+  --font-mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: background 0.15s;
+}
+
+button:hover {
+  background: var(--color-surface-hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input, select {
+  font-family: inherit;
+  font-size: inherit;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}

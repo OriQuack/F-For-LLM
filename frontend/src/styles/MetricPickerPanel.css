@@ -1,0 +1,21 @@
+.metric-picker-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px;
+  gap: 8px;
+}
+
+.metric-picker-panel h3 {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.metric-picker-placeholder {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
