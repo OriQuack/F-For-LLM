@@ -62,6 +62,7 @@
 
 .code-viewer-actions {
   display: flex;
+  justify-content: center;
   gap: 6px;
   padding: 8px 12px;
   border-top: 1px solid var(--color-border);
@@ -69,31 +70,40 @@
 }
 
 .code-viewer-actions button {
-  flex: 1;
-  padding: 8px;
+  padding: 4px 12px;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .code-viewer-actions .btn-human {
-  background: var(--color-human);
-  color: white;
+  background: transparent;
+  color: var(--color-human);
+  border: 2px solid var(--color-human);
 }
 
-.code-viewer-actions .btn-human:hover {
-  background: #43a047;
+.code-viewer-actions .btn-human.active {
+  background: var(--color-human);
+  color: black;
 }
 
 .code-viewer-actions .btn-llm {
-  background: var(--color-llm);
-  color: white;
+  background: transparent;
+  color: var(--color-llm);
+  border: 2px solid var(--color-llm);
 }
 
-.code-viewer-actions .btn-llm:hover {
-  background: #f57c00;
+.code-viewer-actions .btn-llm.active {
+  background: var(--color-llm);
+  color: black;
 }
 
 .code-viewer-actions .btn-unsure {
+  background: transparent;
+  color: #666;
+  border: 2px solid var(--color-unsure);
+}
+
+.code-viewer-actions .btn-unsure.active {
   background: var(--color-unsure);
   color: #333;
 }

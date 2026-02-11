@@ -111,27 +111,24 @@ export default function CodeBlockViewer() {
 
       <div className="code-viewer-actions">
         <button
-          className={`btn-llm ${currentState === 'rejected' ? '' : ''}`}
+          className={`btn-llm ${currentState === 'rejected' ? 'active' : ''}`}
           onClick={() => handleTag('rejected')}
-          style={{ opacity: currentState === 'rejected' ? 1 : 0.7 }}
         >
-          {currentState === 'rejected' ? 'LLM (tagged)' : 'LLM'}
+          LLM
         </button>
         <button
-          className="btn-unsure"
+          className={`btn-unsure ${currentState === undefined ? 'active' : ''}`}
           onClick={() => {
             if (currentBlockId !== null) removeBlockSelection(currentBlockId)
           }}
-          style={{ opacity: currentState === undefined ? 1 : 0.7 }}
         >
           Unsure
         </button>
         <button
-          className={`btn-human ${currentState === 'selected' ? '' : ''}`}
+          className={`btn-human ${currentState === 'selected' ? 'active' : ''}`}
           onClick={() => handleTag('selected')}
-          style={{ opacity: currentState === 'selected' ? 1 : 0.7 }}
         >
-          {currentState === 'selected' ? 'Human (tagged)' : 'Human'}
+          Human
         </button>
       </div>
     </div>
