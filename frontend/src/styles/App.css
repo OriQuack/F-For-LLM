@@ -22,7 +22,7 @@
 
 .app-main {
   display: grid;
-  grid-template-columns: 120px auto 260px 1fr;
+  grid-template-columns: 240px auto 260px 1fr;
   grid-template-rows: 1fr auto;
   gap: 0;
   flex: 1;

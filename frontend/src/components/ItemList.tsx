@@ -1,7 +1,8 @@
 import { useRef, useCallback, useMemo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useStore } from '../store'
-import type { CodeBlock } from '../types'
+import { TagIndicator, DisagreementIndicator } from './Indicators'
+import type { CodeBlock, SelectionState, SelectionSource } from '../types'
 import '../styles/ItemList.css'
 
 interface Props {
@@ -13,9 +14,13 @@ export default function ItemList({ hideTagged }: Props) {
   const currentBlockId = useStore((s) => s.currentBlockId)
   const setCurrentBlock = useStore((s) => s.setCurrentBlock)
   const selectionStates = useStore((s) => s.blockSelectionStates)
+  const selectionSources = useStore((s) => s.blockSelectionSources)
   const similarityScores = useStore((s) => s.similarityScores)
   const diversityIds = useStore((s) => s.diversityIds)
   const activeStage = useStore((s) => s.activeStage)
+  const committeeVotes = useStore((s) => s.committeeVotes)
+  const selectThreshold = useStore((s) => s.selectThreshold)
+  const rejectThreshold = useStore((s) => s.rejectThreshold)
 
   const parentRef = useRef<HTMLDivElement>(null)
 
@@ -49,10 +54,17 @@ export default function ItemList({ hideTagged }: Props) {
     }
 
     if (hideTagged) {
-      list = list.filter((b) => !selectionStates.has(b.block_id))
+      list = list.filter((b) => {
+        // Hide if manually tagged
+        if (selectionSources.get(b.block_id) === 'click') return false
+        // Hide if live-projected by thresholds
+        const s = similarityScores.get(b.block_id)
+        if (s !== undefined && (s >= selectThreshold || s <= rejectThreshold)) return false
+        return true
+      })
     }
     return list
-  }, [blocks, activeStage, diversityIds, similarityScores, selectionStates, hideTagged])
+  }, [blocks, activeStage, diversityIds, similarityScores, selectionStates, selectionSources, selectThreshold, rejectThreshold, hideTagged])
 
   const virtualizer = useVirtualizer({
     count: filteredBlocks.length,
@@ -76,12 +88,30 @@ export default function ItemList({ hideTagged }: Props) {
           const block = filteredBlocks[vItem.index]
           const isCurrent = block.block_id === currentBlockId
           const state = selectionStates.get(block.block_id)
+          const source = selectionSources.get(block.block_id)
           const score = similarityScores.get(block.block_id)
 
           let rowClass = 'item-list-row'
           if (isCurrent) rowClass += ' current'
-          if (state === 'selected') rowClass += ' tagged-selected'
-          else if (state === 'rejected') rowClass += ' tagged-rejected'
+
+          // Determine effective tag: committed state or live threshold preview
+          let effectiveState: SelectionState | undefined = state
+          let effectiveSource: SelectionSource | undefined = source
+          if (!state || source !== 'click') {
+            // Project from score + thresholds for non-click items
+            if (score !== undefined) {
+              if (score >= selectThreshold) {
+                effectiveState = 'selected'
+                effectiveSource = 'threshold'
+              } else if (score <= rejectThreshold) {
+                effectiveState = 'rejected'
+                effectiveSource = 'threshold'
+              } else {
+                effectiveState = undefined
+                effectiveSource = undefined
+              }
+            }
+          }
 
           return (
             <div
@@ -98,7 +128,10 @@ export default function ItemList({ hideTagged }: Props) {
               onClick={() => handleClick(block)}
             >
               <span className="item-name">{block.block_name}</span>
-              <span className="item-type-badge">{block.block_type}</span>
+              {activeStage === 'apply' && (
+                <DisagreementIndicator voteInfo={committeeVotes.get(block.block_id)} />
+              )}
+              <TagIndicator state={effectiveState} isAuto={effectiveSource === 'threshold'} />
               {score !== undefined && (
                 <span className="item-score">{score.toFixed(2)}</span>
               )}

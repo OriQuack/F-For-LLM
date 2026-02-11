@@ -1,11 +1,12 @@
-import React, { useRef, useMemo, useCallback, useState, useEffect } from 'react'
+import React, { useMemo, useCallback, useState, useEffect } from 'react'
 import { useStore } from '../store'
-import { useFlipTracking } from '../hooks/useFlipTracking'
+import { useResizeObserver } from '../hooks/useResizeObserver'
 import {
   calculateHistogramLayout,
   calculateCategoryStackedBars,
   calculateXAxisTicks,
-  calculateYAxisTicks
+  calculateYAxisTicks,
+  HISTOGRAM_MARGIN
 } from '../lib/histogram-utils'
 import type { CategoryCounts } from '../lib/histogram-utils'
 import { COLORS, STRIPE_PATTERN } from '../lib/constants'
@@ -17,7 +18,7 @@ import '../styles/DecisionMarginHistogram.css'
 // ============================================================================
 const TAG_HISTOGRAM_SPACING = {
   svg: {
-    margin: { top: 30, right: 4, bottom: 40, left: 25 },
+    margin: HISTOGRAM_MARGIN,
     xLabelOffset: 34,
     yLabelOffset: -38,
     xTickOffset: 18
@@ -52,13 +53,7 @@ const DecisionMarginHistogram: React.FC = () => {
   const blockSelectionSources = useStore((s) => s.blockSelectionSources)
   const similarityScores = useStore((s) => s.similarityScores)
   const blocks = useStore((s) => s.blocks)
-  const flippedBins = useStore((s) => s.flippedBins)
-
-  const { flippedBins: flipTrackingBins } = useFlipTracking()
-  const allFlippedBins = flippedBins.size > 0 ? flippedBins : flipTrackingBins
-
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [containerSize, setContainerSize] = useState({ width: 800, height: 300 })
+  const { ref: containerRef, size: containerSize, hasMeasured } = useResizeObserver<HTMLDivElement>()
 
   const [thresholds, setThresholds] = useState({
     select: selectThreshold,
@@ -66,17 +61,6 @@ const DecisionMarginHistogram: React.FC = () => {
   })
   const [hoveredBinIndex, setHoveredBinIndex] = useState<number | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
-
-  // ResizeObserver for responsive sizing
-  useEffect(() => {
-    if (!containerRef.current) return
-    const obs = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect
-      if (width > 0 && height > 0) setContainerSize({ width, height })
-    })
-    obs.observe(containerRef.current)
-    return () => obs.disconnect()
-  }, [])
 
   // Sync local thresholds with store
   useEffect(() => {
@@ -105,8 +89,8 @@ const DecisionMarginHistogram: React.FC = () => {
   const histogramChart = useMemo(() => {
     if (!histogramData) return null
     const margin = TAG_HISTOGRAM_SPACING.svg.margin
-    const width = Math.max(400, containerSize.width)
-    const height = Math.max(200, containerSize.height)
+    const width = containerSize.width
+    const height = 300
     return calculateHistogramLayout(histogramData, width, height, margin)
   }, [histogramData, containerSize])
 
@@ -232,7 +216,7 @@ const DecisionMarginHistogram: React.FC = () => {
       <div className="tag-automatic-panel tag-automatic-panel--empty">
         <div className="tag-panel__empty-message">
           <div className="tag-panel__main-instruction">
-            <span className="tag-panel__stage-number">1</span> Tag 3+ blocks in each category to see histogram.
+            Tag 3+ blocks in each category to see histogram.
           </div>
           <div className="tag-panel__progress-row">
             <span className="tag-panel__progress-item" style={{ backgroundColor: COLORS.rejected }}>
@@ -251,12 +235,12 @@ const DecisionMarginHistogram: React.FC = () => {
     <div className="tag-automatic-panel">
       <div className="tag-panel__content">
         <div ref={containerRef} className="tag-panel__histogram-container">
-          {histogramChart ? (
+          {histogramChart && hasMeasured ? (
             <>
               <svg
                 className="tag-panel__svg"
                 width={containerSize.width}
-                height={containerSize.height}
+                height={300}
                 style={{ overflow: 'visible' }}
               >
                 {/* SVG stripe patterns for auto-tagged zones */}
@@ -345,26 +329,6 @@ const DecisionMarginHistogram: React.FC = () => {
                       onMouseLeave={() => { setHoveredBinIndex(null); setTooltipPosition(null) }}
                     />
                   ))}
-
-                  {/* Flip markers — triangles above flipped bins */}
-                  {allFlippedBins.size > 0 && histogramChart.bins.map((bin, binIndex) => {
-                    if (!allFlippedBins.has(binIndex)) return null
-                    const binX = histogramChart.xScale(bin.x0)
-                    const binX1 = histogramChart.xScale(bin.x1)
-                    const binCenterX = (binX + binX1) / 2
-                    const segmentsInBin = categoryBars.filter(s => s.binIndex === binIndex)
-                    const maxY = segmentsInBin.length > 0
-                      ? Math.min(...segmentsInBin.map(s => s.y))
-                      : histogramChart.height
-                    const markerY = Math.max(4, maxY - 8)
-                    return (
-                      <polygon
-                        key={`flip-${binIndex}`}
-                        points={`${binCenterX},${markerY} ${binCenterX - 5},${markerY - 8} ${binCenterX + 5},${markerY - 8}`}
-                        fill="#f59e0b" stroke="#fff" strokeWidth={1}
-                      />
-                    )
-                  })}
 
                   {/* Center line at 0 (dashed) */}
                   <line

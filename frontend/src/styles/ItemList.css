@@ -18,18 +18,8 @@
 }
 
 .item-list-row.current {
-  background: rgba(76, 175, 80, 0.15);
-  border-left: 3px solid var(--color-human);
-  padding-left: 7px;
-}
-
-.item-list-row.tagged-selected {
-  border-left: 3px solid var(--color-human);
-  padding-left: 7px;
-}
-
-.item-list-row.tagged-rejected {
-  border-left: 3px solid var(--color-llm);
+  background: rgba(33, 150, 243, 0.15);
+  border-left: 3px solid #2196F3;
   padding-left: 7px;
 }
 
@@ -57,6 +47,33 @@
   font-family: var(--font-mono);
   min-width: 45px;
   text-align: right;
+  flex-shrink: 0;
+}
+
+.tag-indicator {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 0;
+  border-radius: 3px;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+  width: 46px;
+  text-align: center;
+}
+
+.tag-indicator-text {
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.disagreement-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #CC79A7;
   flex-shrink: 0;
 }
 

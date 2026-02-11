@@ -72,7 +72,7 @@ export default function ThresholdPanel() {
               className={`apply-btn ${isConverging ? 'pulsing' : ''}`}
               onClick={applyThresholdTags}
             >
-              Apply
+              Apply Threshold
             </button>
             <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
               {flipHistory.length > 0

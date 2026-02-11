@@ -58,7 +58,6 @@ interface AppState {
   // Flip tracking
   flipHistory: FlipHistoryEntry[]
   totalIterations: number
-  flippedBins: Set<number>
   previousPredictions: Map<number, 'selected' | 'rejected'>
 
   // Actions
@@ -66,7 +65,7 @@ interface AppState {
   setBlockSelection: (blockId: number, state: SelectionState, source: SelectionSource) => void
   removeBlockSelection: (blockId: number) => void
   fetchHistogram: () => Promise<void>
-  applyThresholdTags: () => void
+  applyThresholdTags: () => Promise<void>
   setCurrentBlock: (blockId: number | null) => void
   updateThresholds: (select: number, reject: number) => void
   setIsDraggingThreshold: (dragging: boolean) => void
@@ -143,7 +142,6 @@ export const useStore = create<AppState>((set, get) => ({
   // Flip tracking
   flipHistory: [],
   totalIterations: 0,
-  flippedBins: new Set(),
   previousPredictions: new Map(),
 
   // ---- Actions ----
@@ -238,7 +236,6 @@ export const useStore = create<AppState>((set, get) => ({
       let flips = 0
       let total = 0
       const newPreds = new Map<number, 'selected' | 'rejected'>()
-      const flippedBins = new Set<number>()
 
       for (const [id, score] of newScores) {
         const pred: 'selected' | 'rejected' = score > 0 ? 'selected' : 'rejected'
@@ -247,15 +244,6 @@ export const useStore = create<AppState>((set, get) => ({
           total++
           if (prevPreds.get(id) !== pred) {
             flips++
-            // Find bin index for this score
-            if (resp.histogram.bin_edges.length > 1) {
-              for (let bi = 0; bi < resp.histogram.bin_edges.length - 1; bi++) {
-                if (score >= resp.histogram.bin_edges[bi] && score < resp.histogram.bin_edges[bi + 1]) {
-                  flippedBins.add(bi)
-                  break
-                }
-              }
-            }
           }
         }
       }
@@ -293,7 +281,6 @@ export const useStore = create<AppState>((set, get) => ({
         histogramStatistics: resp.statistics,
         committeeVotes: newVotes,
         isLoading: false,
-        flippedBins,
         previousPredictions: newPreds,
         flipHistory: newHistory,
         totalIterations: totalIterations + 1,
@@ -307,7 +294,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  applyThresholdTags: () => {
+  applyThresholdTags: async () => {
     const { blocks, similarityScores, selectThreshold, rejectThreshold, blockSelectionStates, blockSelectionSources } = get()
     const states = new Map(blockSelectionStates)
     const sources = new Map(blockSelectionSources)
@@ -351,6 +338,9 @@ export const useStore = create<AppState>((set, get) => ({
       activeCommitId: newCommit.id,
       activeStage: 'apply',
     })
+
+    // Retrain with the newly applied threshold tags
+    await get().fetchHistogram()
   },
 
   setCurrentBlock: (blockId) => set({ currentBlockId: blockId }),

@@ -21,6 +21,7 @@ export default function CodeBlockViewer() {
   const currentBlockId = useStore((s) => s.currentBlockId)
   const blocks = useStore((s) => s.blocks)
   const selectionStates = useStore((s) => s.blockSelectionStates)
+  const selectionSources = useStore((s) => s.blockSelectionSources)
   const setBlockSelection = useStore((s) => s.setBlockSelection)
   const removeBlockSelection = useStore((s) => s.removeBlockSelection)
   const fetchHistogram = useStore((s) => s.fetchHistogram)
@@ -64,6 +65,7 @@ export default function CodeBlockViewer() {
   }, [highlightedHtml, block])
 
   const currentState = currentBlockId !== null ? selectionStates.get(currentBlockId) : undefined
+  const currentSource = currentBlockId !== null ? selectionSources.get(currentBlockId) : undefined
 
   const handleTag = useCallback(
     (state: 'selected' | 'rejected') => {
@@ -111,11 +113,11 @@ export default function CodeBlockViewer() {
 
       <div className="code-viewer-actions">
         <button
-          className={`btn-human ${currentState === 'selected' ? '' : ''}`}
-          onClick={() => handleTag('selected')}
-          style={{ opacity: currentState === 'selected' ? 1 : 0.7 }}
+          className={`btn-llm ${currentState === 'rejected' ? '' : ''}`}
+          onClick={() => handleTag('rejected')}
+          style={{ opacity: currentState === 'rejected' && currentSource === 'click' ? 1 : 0.7 }}
         >
-          {currentState === 'selected' ? 'Human (tagged)' : 'Human'}
+          {currentState === 'rejected' && currentSource === 'click' ? 'LLM (tagged)' : 'LLM'}
         </button>
         <button
           className="btn-unsure"
@@ -127,11 +129,11 @@ export default function CodeBlockViewer() {
           Unsure
         </button>
         <button
-          className={`btn-llm ${currentState === 'rejected' ? '' : ''}`}
-          onClick={() => handleTag('rejected')}
-          style={{ opacity: currentState === 'rejected' ? 1 : 0.7 }}
+          className={`btn-human ${currentState === 'selected' ? '' : ''}`}
+          onClick={() => handleTag('selected')}
+          style={{ opacity: currentState === 'selected' && currentSource === 'click' ? 1 : 0.7 }}
         >
-          {currentState === 'rejected' ? 'LLM (tagged)' : 'LLM'}
+          {currentState === 'selected' && currentSource === 'click' ? 'Human (tagged)' : 'Human'}
         </button>
       </div>
     </div>

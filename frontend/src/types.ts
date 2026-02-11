@@ -91,7 +91,6 @@ export interface FlipHistoryEntry {
 export interface FlipTrackingInfo {
   flipHistory: FlipHistoryEntry[]
   totalIterations: number
-  flippedBins: Set<number>
   previousPredictions: Map<number, 'selected' | 'rejected'>
 }
 

@@ -25,7 +25,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Code Authorship Classifier</h1>
+        <h1>F for LLM</h1>
       </header>
       <ClassifierView />
     </div>
