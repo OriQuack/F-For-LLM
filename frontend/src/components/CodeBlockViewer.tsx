@@ -21,7 +21,6 @@ export default function CodeBlockViewer() {
   const currentBlockId = useStore((s) => s.currentBlockId)
   const blocks = useStore((s) => s.blocks)
   const selectionStates = useStore((s) => s.blockSelectionStates)
-  const selectionSources = useStore((s) => s.blockSelectionSources)
   const setBlockSelection = useStore((s) => s.setBlockSelection)
   const removeBlockSelection = useStore((s) => s.removeBlockSelection)
   const fetchHistogram = useStore((s) => s.fetchHistogram)
@@ -65,7 +64,6 @@ export default function CodeBlockViewer() {
   }, [highlightedHtml, block])
 
   const currentState = currentBlockId !== null ? selectionStates.get(currentBlockId) : undefined
-  const currentSource = currentBlockId !== null ? selectionSources.get(currentBlockId) : undefined
 
   const handleTag = useCallback(
     (state: 'selected' | 'rejected') => {
@@ -115,9 +113,9 @@ export default function CodeBlockViewer() {
         <button
           className={`btn-llm ${currentState === 'rejected' ? '' : ''}`}
           onClick={() => handleTag('rejected')}
-          style={{ opacity: currentState === 'rejected' && currentSource === 'click' ? 1 : 0.7 }}
+          style={{ opacity: currentState === 'rejected' ? 1 : 0.7 }}
         >
-          {currentState === 'rejected' && currentSource === 'click' ? 'LLM (tagged)' : 'LLM'}
+          {currentState === 'rejected' ? 'LLM (tagged)' : 'LLM'}
         </button>
         <button
           className="btn-unsure"
@@ -131,9 +129,9 @@ export default function CodeBlockViewer() {
         <button
           className={`btn-human ${currentState === 'selected' ? '' : ''}`}
           onClick={() => handleTag('selected')}
-          style={{ opacity: currentState === 'selected' && currentSource === 'click' ? 1 : 0.7 }}
+          style={{ opacity: currentState === 'selected' ? 1 : 0.7 }}
         >
-          {currentState === 'selected' && currentSource === 'click' ? 'Human (tagged)' : 'Human'}
+          {currentState === 'selected' ? 'Human (tagged)' : 'Human'}
         </button>
       </div>
     </div>

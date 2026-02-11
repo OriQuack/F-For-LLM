@@ -14,43 +14,35 @@ export function useThresholdPreview(
   isDragging: boolean,
 ): { current: CategoryCounts; preview: CategoryCounts | null } {
   const current = useMemo(() => {
-    let confirmed = 0, autoSelected = 0, rejected = 0, autoRejected = 0
-    for (const [id, state] of selectionStates) {
-      const src = selectionSources.get(id)
-      if (state === 'selected') {
-        if (src === 'click') confirmed++
-        else autoSelected++
-      } else {
-        if (src === 'click') rejected++
-        else autoRejected++
-      }
+    let confirmed = 0, rejected = 0
+    for (const [, state] of selectionStates) {
+      if (state === 'selected') confirmed++
+      else rejected++
     }
     return {
       confirmed,
-      autoSelected,
+      autoSelected: 0,
       rejected,
-      autoRejected,
-      unsure: totalBlocks - confirmed - autoSelected - rejected - autoRejected,
+      autoRejected: 0,
+      unsure: totalBlocks - confirmed - rejected,
     }
-  }, [totalBlocks, selectionStates, selectionSources])
+  }, [totalBlocks, selectionStates])
 
   // Project auto-tags based on current threshold positions (always when scores exist)
   const projected = useMemo(() => {
     if (scores.size === 0) return null
 
     let confirmed = 0, autoSelected = 0, rejected = 0, autoRejected = 0
-    // Start from manual counts
-    for (const [id, state] of selectionStates) {
-      const src = selectionSources.get(id)
-      if (src === 'click') {
-        if (state === 'selected') confirmed++
-        else rejected++
-      }
+
+    // All committed tags → solid categories
+    for (const [, state] of selectionStates) {
+      if (state === 'selected') confirmed++
+      else rejected++
     }
 
-    // Project auto-tags based on thresholds
+    // Only untagged items → striped categories
     for (const [id, score] of scores) {
-      if (selectionSources.get(id) === 'click') continue
+      if (selectionStates.has(id)) continue
       if (score >= selectThreshold) autoSelected++
       else if (score <= rejectThreshold) autoRejected++
     }

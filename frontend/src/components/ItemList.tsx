@@ -2,7 +2,7 @@ import { useRef, useCallback, useMemo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useStore } from '../store'
 import { TagIndicator, DisagreementIndicator } from './Indicators'
-import type { CodeBlock, SelectionState, SelectionSource } from '../types'
+import type { CodeBlock, SelectionState } from '../types'
 import '../styles/ItemList.css'
 
 interface Props {
@@ -14,7 +14,6 @@ export default function ItemList({ hideTagged }: Props) {
   const currentBlockId = useStore((s) => s.currentBlockId)
   const setCurrentBlock = useStore((s) => s.setCurrentBlock)
   const selectionStates = useStore((s) => s.blockSelectionStates)
-  const selectionSources = useStore((s) => s.blockSelectionSources)
   const similarityScores = useStore((s) => s.similarityScores)
   const diversityIds = useStore((s) => s.diversityIds)
   const activeStage = useStore((s) => s.activeStage)
@@ -55,8 +54,8 @@ export default function ItemList({ hideTagged }: Props) {
 
     if (hideTagged) {
       list = list.filter((b) => {
-        // Hide if manually tagged
-        if (selectionSources.get(b.block_id) === 'click') return false
+        // Hide if any committed tag exists (click or threshold)
+        if (selectionStates.has(b.block_id)) return false
         // Hide if live-projected by thresholds
         const s = similarityScores.get(b.block_id)
         if (s !== undefined && (s >= selectThreshold || s <= rejectThreshold)) return false
@@ -64,7 +63,7 @@ export default function ItemList({ hideTagged }: Props) {
       })
     }
     return list
-  }, [blocks, activeStage, diversityIds, similarityScores, selectionStates, selectionSources, selectThreshold, rejectThreshold, hideTagged])
+  }, [blocks, activeStage, diversityIds, similarityScores, selectionStates, selectThreshold, rejectThreshold, hideTagged])
 
   const virtualizer = useVirtualizer({
     count: filteredBlocks.length,
@@ -88,7 +87,6 @@ export default function ItemList({ hideTagged }: Props) {
           const block = filteredBlocks[vItem.index]
           const isCurrent = block.block_id === currentBlockId
           const state = selectionStates.get(block.block_id)
-          const source = selectionSources.get(block.block_id)
           const score = similarityScores.get(block.block_id)
 
           let rowClass = 'item-list-row'
@@ -96,20 +94,15 @@ export default function ItemList({ hideTagged }: Props) {
 
           // Determine effective tag: committed state or live threshold preview
           let effectiveState: SelectionState | undefined = state
-          let effectiveSource: SelectionSource | undefined = source
-          if (!state || source !== 'click') {
-            // Project from score + thresholds for non-click items
-            if (score !== undefined) {
-              if (score >= selectThreshold) {
-                effectiveState = 'selected'
-                effectiveSource = 'threshold'
-              } else if (score <= rejectThreshold) {
-                effectiveState = 'rejected'
-                effectiveSource = 'threshold'
-              } else {
-                effectiveState = undefined
-                effectiveSource = undefined
-              }
+          let isProjected = false
+          if (!state && score !== undefined) {
+            // Only project from score + thresholds for items without committed tags
+            if (score >= selectThreshold) {
+              effectiveState = 'selected'
+              isProjected = true
+            } else if (score <= rejectThreshold) {
+              effectiveState = 'rejected'
+              isProjected = true
             }
           }
 
@@ -131,7 +124,7 @@ export default function ItemList({ hideTagged }: Props) {
               {activeStage === 'apply' && (
                 <DisagreementIndicator voteInfo={committeeVotes.get(block.block_id)} />
               )}
-              <TagIndicator state={effectiveState} isAuto={effectiveSource === 'threshold'} />
+              <TagIndicator state={effectiveState} isAuto={isProjected} />
               {score !== undefined && (
                 <span className="item-score">{score.toFixed(2)}</span>
               )}
