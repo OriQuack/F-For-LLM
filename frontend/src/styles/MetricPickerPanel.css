@@ -21,89 +21,108 @@
   margin: 0;
 }
 
-/* ---- Filter Summary ---- */
+/* ---- Inline Stats (var / correlation) ---- */
 
-.filter-summary {
-  font-size: 10px;
-  color: var(--color-text-secondary);
+.feature-block__stats {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px;
+  gap: 4px 8px;
+  padding-left: 18px; /* align under label text, past checkbox */
 }
 
-.filter-summary__count {
-  font-weight: 500;
-}
-
-.filter-summary__toggle {
-  background: none;
-  border: none;
-  color: var(--color-text-secondary);
-  font-size: 10px;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-}
-
-.filter-summary__toggle:hover {
-  color: var(--color-text-primary, #fff);
-}
-
-.filter-summary__list {
-  width: 100%;
-  list-style: none;
-  margin: 2px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.filter-summary__list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.filter-summary__name {
+.feature-stat {
+  font-size: 9px;
   font-family: monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.filter-summary__reason {
-  flex-shrink: 0;
+  color: var(--color-text-secondary);
   opacity: 0.7;
-  font-style: italic;
 }
 
-/* ---- Feature Importance Bars ---- */
+/* ---- Feature Checkbox List ---- */
 
-.feature-importance-list {
+.feature-checkbox-list {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.feature-importance-row {
+.feature-list__legend {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 16px;
-}
-
-.feature-importance-label {
   font-size: 10px;
   color: var(--color-text-secondary);
-  width: 90px;
-  flex-shrink: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border, #333);
+  margin-bottom: 4px;
+}
+
+.feature-list__legend .feature-importance-bar-bg {
+  width: 40px;
+}
+
+/* ---- Feature Block ---- */
+
+.feature-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.feature-block:not(.feature-block--enabled) {
+  opacity: 0.5;
+}
+
+.feature-block--detailed {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px 6px;
+}
+
+.feature-block.feature-block--highlighted {
+  background: rgba(91, 155, 213, 0.15);
+  outline: 3px solid rgba(91, 155, 213, 0.6);
+  outline-offset: -1px;
+  opacity: 1;
+}
+
+.feature-block__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  font-family: monospace;
+  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: right;
-  font-family: monospace;
+  min-width: 0;
+}
+
+.feature-block__label input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.feature-name--disabled {
+  text-decoration: line-through;
+}
+
+/* ---- Feature Block Details (bar + rank) ---- */
+
+.feature-block__details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 18px; /* align under label text, past checkbox */
+}
+
+.feature-block__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .feature-importance-bar-bg {
@@ -128,6 +147,20 @@
   flex-shrink: 0;
   text-align: right;
   font-family: monospace;
+}
+
+.feature-block__rank {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  font-family: monospace;
+}
+
+.rank-up {
+  color: #4caf50;
+}
+
+.rank-down {
+  color: #ef6c00;
 }
 
 .feature-importance-footer {

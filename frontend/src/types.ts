@@ -81,11 +81,19 @@ export interface FeatureImportanceSnapshot {
   importances: Record<string, number>
 }
 
+export interface CorrelationPair {
+  col_a: string
+  col_b: string
+  r: number
+}
+
 export interface FilterSummary {
   removed_low_variance: string[]
   removed_correlated: { removed: string; kept_instead: string }[]
   original_count: number
   surviving_count: number
+  variances: Record<string, number>
+  correlations: CorrelationPair[]
 }
 
 // ============================================================================

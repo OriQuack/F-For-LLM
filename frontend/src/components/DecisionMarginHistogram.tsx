@@ -216,7 +216,7 @@ const DecisionMarginHistogram: React.FC = () => {
       <div className="tag-automatic-panel tag-automatic-panel--empty">
         <div className="tag-panel__empty-message">
           <div className="tag-panel__main-instruction">
-            Tag 3+ blocks in each category to see histogram.
+            Tag 3+ blocks in each category
           </div>
           <div className="tag-panel__progress-row">
             <span className="tag-panel__progress-item" style={{ backgroundColor: COLORS.rejected }}>

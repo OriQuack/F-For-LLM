@@ -2,7 +2,6 @@ import MetricPickerPanel from './MetricPickerPanel'
 import SelectionPanel from './SelectionPanel'
 import StageAccordion from './StageAccordion'
 import CodeBlockViewer from './CodeBlockViewer'
-import MetricsPanel from './MetricsPanel'
 import ThresholdPanel from './ThresholdPanel'
 
 export default function ClassifierView() {
@@ -22,7 +21,6 @@ export default function ClassifierView() {
 
       <div className="center-column">
         <CodeBlockViewer />
-        <MetricsPanel />
       </div>
 
       <div className="bottom-panel">

@@ -36,13 +36,15 @@ class ClassificationService:
         self._svm_cache: Dict[str, Tuple[SVC, StandardScaler]] = {}
         self._max_cache_size = 100
 
-    def _extract_metrics(self, block_ids: List[int]) -> Optional[np.ndarray]:
+    def _extract_metrics(
+        self, block_ids: List[int], feature_columns: Optional[List[str]] = None,
+    ) -> Optional[np.ndarray]:
         """Extract metric vectors for given block IDs. Returns (ids, matrix) or None."""
         metrics_df = self.data_service.get_metrics(block_ids)
         if metrics_df is None or len(metrics_df) == 0:
             return None
 
-        metric_cols = self.data_service.metric_columns
+        metric_cols = feature_columns if feature_columns is not None else self.data_service.metric_columns
         if not metric_cols:
             return None
 
@@ -59,7 +61,16 @@ class ClassificationService:
         if not self.data_service.is_ready():
             raise RuntimeError("DataService not ready")
 
-        result = self._extract_metrics(request.block_ids)
+        # Resolve per-request feature subset
+        if request.selected_features is not None:
+            valid_set = set(self.data_service.all_metric_columns)
+            feature_cols = [f for f in request.selected_features if f in valid_set]
+            if not feature_cols:
+                feature_cols = self.data_service.metric_columns
+        else:
+            feature_cols = self.data_service.metric_columns
+
+        result = self._extract_metrics(request.block_ids, feature_cols)
         if result is None:
             return SimilarityHistogramResponse(
                 scores={},
@@ -105,7 +116,7 @@ class ClassificationService:
         rej_weights = np.array([id_to_weight.get(int(block_ids_arr[i]), CLICK_WEIGHT) for i in rej_indices])
 
         # Check cache
-        cache_key = self._cache_key(request.selected_items, request.rejected_items)
+        cache_key = self._cache_key(request.selected_items, request.rejected_items, feature_cols)
         if cache_key in self._svm_cache:
             model, scaler = self._svm_cache[cache_key]
         else:
@@ -125,7 +136,7 @@ class ClassificationService:
 
         rf, mlp, committee_scaler, feature_importances = self.committee_service.train_committee(
             X_train, y_train, sample_weights,
-            feature_names=self.data_service.metric_columns,
+            feature_names=feature_cols,
         )
 
         committee_votes_response = None
@@ -152,7 +163,11 @@ class ClassificationService:
             feature_importances=feature_importances,
         )
 
-    def _cache_key(self, selected: List[WeightedBlockId], rejected: List[WeightedBlockId]) -> str:
+    def _cache_key(
+        self, selected: List[WeightedBlockId], rejected: List[WeightedBlockId],
+        feature_cols: List[str],
+    ) -> str:
         sel = sorted([(i.id, i.source) for i in selected])
         rej = sorted([(i.id, i.source) for i in rejected])
-        return hashlib.md5(f"{sel}_{rej}".encode()).hexdigest()
+        feat = sorted(feature_cols)
+        return hashlib.md5(f"{sel}_{rej}_{feat}".encode()).hexdigest()

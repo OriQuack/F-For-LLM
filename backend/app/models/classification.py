@@ -21,6 +21,7 @@ class SimilarityHistogramRequest(BaseModel):
     selected_items: List[WeightedBlockId]
     rejected_items: List[WeightedBlockId]
     block_ids: List[int]
+    selected_features: Optional[List[str]] = None
 
 
 class SimilarityHistogramResponse(BaseModel):

@@ -25,6 +25,7 @@ export default function SelectionPanel() {
 
   return (
     <div className="selection-panel">
+      <div className="selection-panel__total">{total} blocks</div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <SelectionBar counts={current} previewCounts={preview} total={total} />
       </div>

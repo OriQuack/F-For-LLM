@@ -59,6 +59,8 @@ interface AppState {
   previousPredictions: Map<number, 'selected' | 'rejected'>
 
   // Feature selection
+  allMetricColumns: string[]
+  enabledFeatures: Set<string>
   featureImportances: Record<string, number> | null
   featureImportanceHistory: FeatureImportanceSnapshot[]
   filterSummary: FilterSummary | null
@@ -75,6 +77,7 @@ interface AppState {
   setActiveStage: (stage: ActiveStage) => void
   setHideTagged: (hide: boolean) => void
   setShowDisagreementOnly: (show: boolean) => void
+  setFeatureEnabled: (feature: string, enabled: boolean) => void
 
   // Navigation
   getFilteredBlocks: () => CodeBlock[]
@@ -124,6 +127,8 @@ export const useStore = create<AppState>((set, get) => ({
   previousPredictions: new Map(),
 
   // Feature selection
+  allMetricColumns: [],
+  enabledFeatures: new Set<string>(),
   featureImportances: null,
   featureImportanceHistory: [],
   filterSummary: null,
@@ -141,6 +146,8 @@ export const useStore = create<AppState>((set, get) => ({
       set({
         blocks,
         metricColumns: metric_columns,
+        allMetricColumns: resp.all_metric_columns ?? metric_columns,
+        enabledFeatures: new Set(metric_columns),
         filterSummary: resp.filter_summary ?? null,
         diversityIds: new Set(diversityIdsArr),
         initialized: true,
@@ -191,7 +198,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({ isLoading: true })
     try {
       const blockIds = blocks.map((b) => b.block_id)
-      const resp = await fetchSimilarityHistogram(selectedItems, rejectedItems, blockIds)
+      const enabledArr = Array.from(get().enabledFeatures)
+      const resp = await fetchSimilarityHistogram(selectedItems, rejectedItems, blockIds, enabledArr)
 
       const newScores = new Map<number, number>()
       for (const [k, v] of Object.entries(resp.scores)) {
@@ -331,6 +339,15 @@ export const useStore = create<AppState>((set, get) => ({
   setHideTagged: (hide) => set({ hideTagged: hide }),
 
   setShowDisagreementOnly: (show) => set({ showDisagreementOnly: show }),
+
+  setFeatureEnabled: (feature, enabled) => {
+    set((s) => {
+      const next = new Set(s.enabledFeatures)
+      if (enabled) next.add(feature)
+      else next.delete(feature)
+      return { enabledFeatures: next }
+    })
+  },
 
   // ---- Navigation ----
 

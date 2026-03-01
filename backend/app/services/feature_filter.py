@@ -1,20 +1,29 @@
-"""Unsupervised feature filtering — drop near-zero-variance and highly correlated columns."""
+"""Unsupervised feature filtering — compute variance and correlation stats for all columns."""
 
 import numpy as np
 import logging
-from dataclasses import dataclass
-from typing import List, Tuple
+from dataclasses import dataclass, field
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CorrelationPair:
+    col_a: str
+    col_b: str
+    r: float
 
 
 @dataclass
 class FilterResult:
     surviving_columns: List[str]
     removed_low_variance: List[str]
-    removed_correlated: List[Tuple[str, str]]  # (removed, kept_instead)
+    removed_correlated: List[Tuple[str, str]]  # (removed, kept_instead) — recommendations only
     original_count: int
     surviving_count: int
+    variances: Dict[str, float] = field(default_factory=dict)
+    correlations: List[CorrelationPair] = field(default_factory=list)
 
 
 def filter_features(
@@ -23,72 +32,61 @@ def filter_features(
     variance_threshold: float,
     correlation_threshold: float,
 ) -> FilterResult:
-    """Filter features by variance and pairwise correlation.
+    """Compute variance and correlation stats for all features.
+
+    All columns survive — nothing is removed. The removed_low_variance and
+    removed_correlated fields are populated as recommendations only.
 
     Args:
         column_names: Feature names matching matrix columns.
         matrix: (n_samples, n_features) numeric array.
-        variance_threshold: Drop columns with variance below this.
-        correlation_threshold: For pairs with |r| above this, drop the lower-variance one.
+        variance_threshold: Columns with variance below this are flagged.
+        correlation_threshold: Pairs with |r| above this are flagged.
 
     Returns:
-        FilterResult with surviving columns and removal metadata.
+        FilterResult with all columns surviving plus stats metadata.
     """
     original_count = len(column_names)
 
-    # Phase 1: variance filter
-    variances = np.var(matrix, axis=0)
-    var_mask = variances >= variance_threshold
+    # Compute per-column variance
+    variances_arr = np.var(matrix, axis=0)
+    variances = {name: float(v) for name, v in zip(column_names, variances_arr)}
+
+    # Flag low-variance columns (recommendations only)
     removed_low_variance = [
-        name for name, keep in zip(column_names, var_mask) if not keep
+        name for name, v in zip(column_names, variances_arr) if v < variance_threshold
     ]
 
-    surviving_names = [name for name, keep in zip(column_names, var_mask) if keep]
-    surviving_vars = variances[var_mask]
-    surviving_matrix = matrix[:, var_mask]
-
-    if len(surviving_names) < 2:
-        return FilterResult(
-            surviving_columns=surviving_names,
-            removed_low_variance=removed_low_variance,
-            removed_correlated=[],
-            original_count=original_count,
-            surviving_count=len(surviving_names),
-        )
-
-    # Phase 2: correlation filter
-    corr = np.corrcoef(surviving_matrix, rowvar=False)
-    # Handle NaN (e.g. constant columns that slipped through)
-    corr = np.nan_to_num(corr, nan=0.0)
-
-    n = len(surviving_names)
-    drop_indices: set = set()
+    # Compute correlation pairs above threshold
+    correlations: List[CorrelationPair] = []
     removed_correlated: List[Tuple[str, str]] = []
 
-    for i in range(n):
-        if i in drop_indices:
-            continue
-        for j in range(i + 1, n):
-            if j in drop_indices:
-                continue
-            if abs(corr[i, j]) >= correlation_threshold:
-                # Drop the one with lower variance
-                if surviving_vars[i] >= surviving_vars[j]:
-                    drop_indices.add(j)
-                    removed_correlated.append((surviving_names[j], surviving_names[i]))
-                else:
-                    drop_indices.add(i)
-                    removed_correlated.append((surviving_names[i], surviving_names[j]))
-                    break  # i is dropped, stop checking its pairs
+    if len(column_names) >= 2:
+        corr = np.corrcoef(matrix, rowvar=False)
+        corr = np.nan_to_num(corr, nan=0.0)
 
-    final_columns = [
-        name for idx, name in enumerate(surviving_names) if idx not in drop_indices
-    ]
+        n = len(column_names)
+        for i in range(n):
+            for j in range(i + 1, n):
+                r = abs(corr[i, j])
+                correlations.append(CorrelationPair(
+                    col_a=column_names[i],
+                    col_b=column_names[j],
+                    r=round(float(r), 4),
+                ))
+                # Recommend dropping the lower-variance one (only above threshold)
+                if r >= correlation_threshold:
+                    if variances_arr[i] >= variances_arr[j]:
+                        removed_correlated.append((column_names[j], column_names[i]))
+                    else:
+                        removed_correlated.append((column_names[i], column_names[j]))
 
     return FilterResult(
-        surviving_columns=final_columns,
+        surviving_columns=list(column_names),  # all columns survive
         removed_low_variance=removed_low_variance,
         removed_correlated=removed_correlated,
         original_count=original_count,
-        surviving_count=len(final_columns),
+        surviving_count=original_count,
+        variances=variances,
+        correlations=correlations,
     )

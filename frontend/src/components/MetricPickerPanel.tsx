@@ -1,93 +1,141 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useStore } from '../store'
+import CorrelationMatrix from './CorrelationMatrix'
 import '../styles/MetricPickerPanel.css'
 
 export default function MetricPickerPanel() {
+  const allMetricColumns = useStore((s) => s.allMetricColumns)
+  const enabledFeatures = useStore((s) => s.enabledFeatures)
+  const setFeatureEnabled = useStore((s) => s.setFeatureEnabled)
   const filterSummary = useStore((s) => s.filterSummary)
   const featureImportances = useStore((s) => s.featureImportances)
   const featureImportanceHistory = useStore((s) => s.featureImportanceHistory)
-  const [filterExpanded, setFilterExpanded] = useState(false)
+  const activeStage = useStore((s) => s.activeStage)
 
-  const hasRemovals =
-    filterSummary &&
-    (filterSummary.removed_low_variance.length > 0 ||
-      filterSummary.removed_correlated.length > 0)
+  const showStats = activeStage === 'bootstrap'
+  const showImportance = !showStats
 
-  // Sort importances descending
-  const sortedImportances = featureImportances
-    ? Object.entries(featureImportances).sort(([, a], [, b]) => b - a)
-    : []
-  const maxImportance =
-    sortedImportances.length > 0 ? sortedImportances[0][1] : 1
+  const [highlightedMetrics, setHighlightedMetrics] = useState<Set<string>>(new Set())
+  const handleHoverMetrics = useCallback((pair: [string, string] | null) => {
+    setHighlightedMetrics(pair ? new Set(pair) : new Set())
+  }, [])
+
+  // Max importance for bar scaling
+  const maxImportance = featureImportances
+    ? Math.max(...Object.values(featureImportances), 0)
+    : 0
+
+  // Rank computation from current and previous importance snapshots
+  const currentRanks = featureImportances
+    ? Object.entries(featureImportances)
+        .sort((a, b) => b[1] - a[1])
+        .reduce<Record<string, number>>((acc, [n], i) => { acc[n] = i + 1; return acc }, {})
+    : null
+
+  const prevSnapshot = featureImportanceHistory.length >= 2
+    ? featureImportanceHistory[featureImportanceHistory.length - 2]
+    : null
+  const prevRanks = prevSnapshot
+    ? Object.entries(prevSnapshot.importances)
+        .sort((a, b) => b[1] - a[1])
+        .reduce<Record<string, number>>((acc, [n], i) => { acc[n] = i + 1; return acc }, {})
+    : null
 
   return (
     <div className="metric-picker-panel">
       <h3>Metrics</h3>
 
-      {/* Filter Summary */}
-      {filterSummary && (
-        <div className="filter-summary">
-          <span className="filter-summary__count">
-            {filterSummary.surviving_count} of {filterSummary.original_count} metrics kept
-          </span>
-          {hasRemovals && (
-            <button
-              className="filter-summary__toggle"
-              onClick={() => setFilterExpanded(!filterExpanded)}
-            >
-              {filterExpanded ? 'hide' : 'details'}
-            </button>
-          )}
-          {filterExpanded && hasRemovals && (
-            <ul className="filter-summary__list">
-              {filterSummary.removed_low_variance.map((name) => (
-                <li key={name}>
-                  <span className="filter-summary__name">{name}</span>
-                  <span className="filter-summary__reason">low variance</span>
-                </li>
-              ))}
-              {filterSummary.removed_correlated.map(({ removed, kept_instead }) => (
-                <li key={removed}>
-                  <span className="filter-summary__name">{removed}</span>
-                  <span className="filter-summary__reason">
-                    correlated with {kept_instead}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {/* Feature Importance Bars */}
-      {sortedImportances.length > 0 ? (
-        <div className="feature-importance-list">
-          {sortedImportances.map(([name, value]) => (
-            <div key={name} className="feature-importance-row">
-              <span className="feature-importance-label" title={name}>
-                {name}
-              </span>
+      {/* Feature Checkboxes */}
+      {allMetricColumns.length > 0 ? (
+        <div className="feature-checkbox-list">
+          {showImportance && featureImportances && maxImportance > 0 && (
+            <div className="feature-list__legend">
+              <span>Feature importance</span>
               <div className="feature-importance-bar-bg">
-                <div
-                  className="feature-importance-bar-fill"
-                  style={{
-                    width: `${maxImportance > 0 ? (value / maxImportance) * 100 : 0}%`,
-                  }}
-                />
+                <div className="feature-importance-bar-fill" style={{ width: '60%' }} />
               </div>
-              <span className="feature-importance-value">
-                {(value * 100).toFixed(1)}%
-              </span>
             </div>
-          ))}
-          <div className="feature-importance-footer">
-            {featureImportanceHistory.length} iteration{featureImportanceHistory.length !== 1 ? 's' : ''} tracked
-          </div>
+          )}
+          {allMetricColumns.map((name) => {
+            const enabled = enabledFeatures.has(name)
+            const importance = featureImportances?.[name]
+            const hasDetails = showImportance && enabled && importance !== undefined && maxImportance > 0
+            const pct = hasDetails ? (importance / maxImportance) * 100 : 0
+            const fmtPct = hasDetails ? (importance * 100).toFixed(1) + '%' : ''
+            const rank = currentRanks?.[name]
+            const prevRank = prevRanks?.[name]
+            const rankDelta = rank != null && prevRank != null ? prevRank - rank : 0
+
+            const variance = filterSummary?.variances?.[name]
+            const isHighlighted = highlightedMetrics.has(name)
+
+            return (
+              <div
+                key={name}
+                className={`feature-block${enabled ? ' feature-block--enabled' : ''}${hasDetails ? ' feature-block--detailed' : ''}${isHighlighted ? ' feature-block--highlighted' : ''}`}
+              >
+                {/* Row 1: checkbox + name */}
+                <label className="feature-block__label" title={name}>
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={(e) => setFeatureEnabled(name, e.target.checked)}
+                  />
+                  <span className={enabled ? '' : 'feature-name--disabled'}>{name}</span>
+                </label>
+
+                {/* Inline stats: variance (bootstrap only) */}
+                {showStats && variance !== undefined && (
+                  <div className="feature-block__stats">
+                    <span className="feature-stat feature-stat--var">
+                      var: {variance < 0.001 ? variance.toExponential(1) : variance.toFixed(3)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Importance bar + rank (only when enabled AND importance exists) */}
+                {hasDetails && (
+                  <div className="feature-block__details">
+                    <div className="feature-block__bar-row">
+                      <div className="feature-importance-bar-bg">
+                        <div
+                          className="feature-importance-bar-fill"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="feature-importance-value">{fmtPct}</span>
+                    </div>
+                    <span className="feature-block__rank">
+                      rank #{rank}
+                      {rankDelta !== 0 && (
+                        <span className={rankDelta > 0 ? 'rank-up' : 'rank-down'}>
+                          {rankDelta > 0 ? ` \u2191${rankDelta}` : ` \u2193${Math.abs(rankDelta)}`}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          {featureImportanceHistory.length > 0 && (
+            <div className="feature-importance-footer">
+              {featureImportanceHistory.length} iteration{featureImportanceHistory.length !== 1 ? 's' : ''} tracked
+            </div>
+          )}
         </div>
       ) : (
         <p className="metric-picker-placeholder">
-          Train model to see feature importances
+          No metric columns available
         </p>
+      )}
+      {showStats && filterSummary?.correlations && (
+        <CorrelationMatrix
+          metricNames={allMetricColumns}
+          correlations={filterSummary.correlations}
+          highlightedMetrics={highlightedMetrics}
+          onHoverMetrics={handleHoverMetrics}
+        />
       )}
     </div>
   )

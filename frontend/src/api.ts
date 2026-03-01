@@ -56,6 +56,7 @@ export async function fetchSimilarityHistogram(
   selectedItems: WeightedBlockId[],
   rejectedItems: WeightedBlockId[],
   blockIds: number[],
+  selectedFeatures?: string[],
 ): Promise<SimilarityScoreHistogramResponse> {
   return post<SimilarityScoreHistogramResponse>(
     `${BASE}/similarity-score-histogram`,
@@ -63,6 +64,7 @@ export async function fetchSimilarityHistogram(
       selected_items: selectedItems,
       rejected_items: rejectedItems,
       block_ids: blockIds,
+      ...(selectedFeatures && { selected_features: selectedFeatures }),
     },
   )
 }
