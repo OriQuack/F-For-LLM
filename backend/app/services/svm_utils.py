@@ -63,6 +63,7 @@ def build_similarity_histogram_response(
     score_values: np.ndarray,
     total_items: int,
     committee_votes: Optional[Dict[str, CommitteeVoteInfo]] = None,
+    feature_importances: Optional[Dict[str, float]] = None,
 ) -> SimilarityHistogramResponse:
     """Build histogram response from raw scores."""
     if len(score_values) == 0:
@@ -91,4 +92,5 @@ def build_similarity_histogram_response(
         statistics=statistics,
         total_items=total_items,
         committee_votes=committee_votes,
+        feature_importances=feature_importances,
     )

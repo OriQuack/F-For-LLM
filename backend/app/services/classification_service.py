@@ -123,8 +123,9 @@ class ClassificationService:
         y_train = np.array([1] * len(sel_vectors) + [0] * len(rej_vectors))
         sample_weights = np.concatenate([sel_weights, rej_weights])
 
-        rf, mlp, committee_scaler = self.committee_service.train_committee(
-            X_train, y_train, sample_weights
+        rf, mlp, committee_scaler, feature_importances = self.committee_service.train_committee(
+            X_train, y_train, sample_weights,
+            feature_names=self.data_service.metric_columns,
         )
 
         committee_votes_response = None
@@ -148,6 +149,7 @@ class ClassificationService:
         return build_similarity_histogram_response(
             scores_dict, np.array(list(scores_dict.values())),
             len(scores_dict), committee_votes_response,
+            feature_importances=feature_importances,
         )
 
     def _cache_key(self, selected: List[WeightedBlockId], rejected: List[WeightedBlockId]) -> str:

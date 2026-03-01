@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useStore } from '../store'
 import { fetchBlockCode } from '../api'
 import Prism from 'prismjs'
@@ -21,9 +21,9 @@ export default function CodeBlockViewer() {
   const currentBlockId = useStore((s) => s.currentBlockId)
   const blocks = useStore((s) => s.blocks)
   const selectionStates = useStore((s) => s.blockSelectionStates)
-  const setBlockSelection = useStore((s) => s.setBlockSelection)
   const removeBlockSelection = useStore((s) => s.removeBlockSelection)
-  const fetchHistogram = useStore((s) => s.fetchHistogram)
+  const labelBlock = useStore((s) => s.labelBlock)
+  const selectNextUntagged = useStore((s) => s.selectNextUntagged)
 
   const [code, setCode] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -65,29 +65,6 @@ export default function CodeBlockViewer() {
 
   const currentState = currentBlockId !== null ? selectionStates.get(currentBlockId) : undefined
 
-  const handleTag = useCallback(
-    (state: 'selected' | 'rejected') => {
-      if (currentBlockId === null) return
-      if (currentState === state) {
-        removeBlockSelection(currentBlockId)
-      } else {
-        setBlockSelection(currentBlockId, state, 'click')
-      }
-      // Auto-advance to next untagged block
-      const idx = blocks.findIndex((b) => b.block_id === currentBlockId)
-      for (let i = 1; i < blocks.length; i++) {
-        const next = blocks[(idx + i) % blocks.length]
-        if (!selectionStates.has(next.block_id)) {
-          useStore.getState().setCurrentBlock(next.block_id)
-          break
-        }
-      }
-      // Trigger histogram update
-      fetchHistogram()
-    },
-    [currentBlockId, currentState, blocks, selectionStates, setBlockSelection, removeBlockSelection, fetchHistogram],
-  )
-
   if (!block) {
     return <div className="code-viewer"><div className="code-viewer-empty">Select a block to view</div></div>
   }
@@ -112,21 +89,24 @@ export default function CodeBlockViewer() {
       <div className="code-viewer-actions">
         <button
           className={`btn-llm ${currentState === 'rejected' ? 'active' : ''}`}
-          onClick={() => handleTag('rejected')}
+          onClick={() => currentBlockId !== null && labelBlock(currentBlockId, 'rejected')}
         >
           LLM
         </button>
         <button
           className={`btn-unsure ${currentState === undefined ? 'active' : ''}`}
           onClick={() => {
-            if (currentBlockId !== null) removeBlockSelection(currentBlockId)
+            if (currentBlockId !== null) {
+              removeBlockSelection(currentBlockId)
+              selectNextUntagged()
+            }
           }}
         >
           Unsure
         </button>
         <button
           className={`btn-human ${currentState === 'selected' ? 'active' : ''}`}
-          onClick={() => handleTag('selected')}
+          onClick={() => currentBlockId !== null && labelBlock(currentBlockId, 'selected')}
         >
           Human
         </button>

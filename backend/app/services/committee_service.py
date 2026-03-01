@@ -41,14 +41,15 @@ class CommitteeService:
         X_train: np.ndarray,
         y_train: np.ndarray,
         sample_weights: Optional[np.ndarray] = None,
-    ) -> Tuple[Optional[RandomForestClassifier], Optional[WeightedMLPClassifier], Optional[StandardScaler]]:
-        """Train RF and MLP models for committee."""
+        feature_names: Optional[List[str]] = None,
+    ) -> Tuple[Optional[RandomForestClassifier], Optional[WeightedMLPClassifier], Optional[StandardScaler], Optional[Dict[str, float]]]:
+        """Train RF and MLP models for committee. Returns (rf, mlp, scaler, feature_importances)."""
         n_positive = np.sum(y_train == 1)
         n_negative = np.sum(y_train == 0)
 
         if n_positive < self.MIN_SAMPLES_PER_CLASS or n_negative < self.MIN_SAMPLES_PER_CLASS:
             logger.warning(f"Insufficient samples: {n_positive} pos, {n_negative} neg")
-            return None, None, None
+            return None, None, None, None
 
         n_samples = len(y_train)
         scaler = StandardScaler()
@@ -57,10 +58,15 @@ class CommitteeService:
         rf_model = self._train_rf(X_scaled, y_train, sample_weights, n_samples)
         mlp_model = self._train_mlp(X_scaled, y_train, sample_weights, n_samples)
 
+        # Extract RF feature importances
+        feature_importances = None
+        if rf_model is not None and feature_names is not None:
+            feature_importances = dict(zip(feature_names, rf_model.feature_importances_.tolist()))
+
         self._rf_model = rf_model
         self._mlp_model = mlp_model
         self._scaler = scaler
-        return rf_model, mlp_model, scaler
+        return rf_model, mlp_model, scaler, feature_importances
 
     def _train_rf(self, X, y, weights, n):
         try:

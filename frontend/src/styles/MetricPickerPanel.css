@@ -4,6 +4,7 @@
   height: 100%;
   padding: 8px;
   gap: 8px;
+  overflow-y: auto;
 }
 
 .metric-picker-panel h3 {
@@ -18,4 +19,121 @@
   font-size: 11px;
   color: var(--color-text-secondary);
   margin: 0;
+}
+
+/* ---- Filter Summary ---- */
+
+.filter-summary {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.filter-summary__count {
+  font-weight: 500;
+}
+
+.filter-summary__toggle {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.filter-summary__toggle:hover {
+  color: var(--color-text-primary, #fff);
+}
+
+.filter-summary__list {
+  width: 100%;
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-summary__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.filter-summary__name {
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-summary__reason {
+  flex-shrink: 0;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* ---- Feature Importance Bars ---- */
+
+.feature-importance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.feature-importance-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 16px;
+}
+
+.feature-importance-label {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  width: 90px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  font-family: monospace;
+}
+
+.feature-importance-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--color-border, #333);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.feature-importance-bar-fill {
+  height: 100%;
+  background: var(--color-accent, #5b9bd5);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.feature-importance-value {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  width: 36px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: monospace;
+}
+
+.feature-importance-footer {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  margin-top: 2px;
+  text-align: right;
 }

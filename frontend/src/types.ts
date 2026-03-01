@@ -51,29 +51,7 @@ export interface SimilarityScoreHistogramResponse {
   statistics: SimilarityHistogramStatistics
   total_items: number
   committee_votes?: Record<string, CommitteeVoteInfo> | null
-}
-
-// ============================================================================
-// COMMIT HISTORY TYPES
-// ============================================================================
-
-export type CommitType = 'initial' | 'manual' | 'threshold'
-
-export interface CommitCounts {
-  selected: number
-  selectedAuto: number
-  rejected: number
-  rejectedAuto: number
-  unsure: number
-}
-
-export interface Commit {
-  id: number
-  type: CommitType
-  timestamp: number
-  states: Map<number, SelectionState>
-  sources: Map<number, SelectionSource>
-  counts: CommitCounts
+  feature_importances?: Record<string, number> | null
 }
 
 // ============================================================================
@@ -95,8 +73,23 @@ export interface FlipTrackingInfo {
 }
 
 // ============================================================================
+// FEATURE SELECTION TYPES
+// ============================================================================
+
+export interface FeatureImportanceSnapshot {
+  iteration: number
+  importances: Record<string, number>
+}
+
+export interface FilterSummary {
+  removed_low_variance: string[]
+  removed_correlated: { removed: string; kept_instead: string }[]
+  original_count: number
+  surviving_count: number
+}
+
+// ============================================================================
 // UI TYPES
 // ============================================================================
 
-export type SortMode = 'default' | 'decisionMargin' | 'diversity'
 export type ActiveStage = 'bootstrap' | 'learn' | 'apply'

@@ -29,3 +29,4 @@ class SimilarityHistogramResponse(BaseModel):
     statistics: HistogramStatistics
     total_items: int
     committee_votes: Optional[Dict[str, CommitteeVoteInfo]] = None
+    feature_importances: Optional[Dict[str, float]] = None

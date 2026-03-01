@@ -7,9 +7,9 @@ import type {
   SimilarityHistogramData,
   SimilarityHistogramStatistics,
   CommitteeVoteInfo,
-  Commit,
-  CommitCounts,
   FlipHistoryEntry,
+  FeatureImportanceSnapshot,
+  FilterSummary,
   ActiveStage,
 } from '../types'
 import {
@@ -47,18 +47,21 @@ interface AppState {
   currentBlockId: number | null
   isLoading: boolean
   activeStage: ActiveStage
+  hideTagged: boolean
+  showDisagreementOnly: boolean
 
   // Cold start
   diversityIds: Set<number>
-
-  // Commit history
-  commits: Commit[]
-  activeCommitId: number
 
   // Flip tracking
   flipHistory: FlipHistoryEntry[]
   totalIterations: number
   previousPredictions: Map<number, 'selected' | 'rejected'>
+
+  // Feature selection
+  featureImportances: Record<string, number> | null
+  featureImportanceHistory: FeatureImportanceSnapshot[]
+  filterSummary: FilterSummary | null
 
   // Actions
   initialize: () => Promise<void>
@@ -70,36 +73,14 @@ interface AppState {
   updateThresholds: (select: number, reject: number) => void
   setIsDraggingThreshold: (dragging: boolean) => void
   setActiveStage: (stage: ActiveStage) => void
-  restoreCommit: (commitId: number) => void
-}
+  setHideTagged: (hide: boolean) => void
+  setShowDisagreementOnly: (show: boolean) => void
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function computeCounts(
-  states: Map<number, SelectionState>,
-  sources: Map<number, SelectionSource>,
-  total: number,
-): CommitCounts {
-  let selected = 0, selectedAuto = 0, rejected = 0, rejectedAuto = 0
-  for (const [id, state] of states) {
-    const src = sources.get(id)
-    if (state === 'selected') {
-      if (src === 'click') selected++
-      else selectedAuto++
-    } else {
-      if (src === 'click') rejected++
-      else rejectedAuto++
-    }
-  }
-  return {
-    selected,
-    selectedAuto,
-    rejected,
-    rejectedAuto,
-    unsure: total - selected - selectedAuto - rejected - rejectedAuto,
-  }
+  // Navigation
+  getFilteredBlocks: () => CodeBlock[]
+  selectFirstUntagged: () => void
+  selectNextUntagged: () => void
+  labelBlock: (blockId: number, state: SelectionState) => Promise<void>
 }
 
 // ============================================================================
@@ -131,47 +112,40 @@ export const useStore = create<AppState>((set, get) => ({
   currentBlockId: null,
   isLoading: false,
   activeStage: 'bootstrap',
+  hideTagged: false,
+  showDisagreementOnly: false,
 
   // Cold start
   diversityIds: new Set(),
-
-  // Commit history
-  commits: [],
-  activeCommitId: 0,
 
   // Flip tracking
   flipHistory: [],
   totalIterations: 0,
   previousPredictions: new Map(),
 
+  // Feature selection
+  featureImportances: null,
+  featureImportanceHistory: [],
+  filterSummary: null,
+
   // ---- Actions ----
 
   initialize: async () => {
     set({ isLoading: true })
     try {
-      const { blocks, metric_columns } = await fetchBlocks()
+      const resp = await fetchBlocks()
+      const { blocks, metric_columns } = resp
       const blockIds = blocks.map((b) => b.block_id)
       const diversityIdsArr = await fetchColdStartSuggestions(blockIds, 10)
-
-      // Create initial commit (Commit 0)
-      const initialCommit: Commit = {
-        id: 0,
-        type: 'initial',
-        timestamp: Date.now(),
-        states: new Map(),
-        sources: new Map(),
-        counts: { selected: 0, selectedAuto: 0, rejected: 0, rejectedAuto: 0, unsure: blocks.length },
-      }
 
       set({
         blocks,
         metricColumns: metric_columns,
+        filterSummary: resp.filter_summary ?? null,
         diversityIds: new Set(diversityIdsArr),
         initialized: true,
         isLoading: false,
         currentBlockId: diversityIdsArr[0] ?? blocks[0]?.block_id ?? null,
-        commits: [initialCommit],
-        activeCommitId: 0,
       })
     } catch (e) {
       console.error('Failed to initialize:', e)
@@ -231,6 +205,17 @@ export const useStore = create<AppState>((set, get) => ({
         }
       }
 
+      // Feature importances
+      const newImportances = resp.feature_importances ?? null
+      let newImportanceHistory = get().featureImportanceHistory
+      if (newImportances) {
+        const snapshot: FeatureImportanceSnapshot = {
+          iteration: get().totalIterations + 1,
+          importances: newImportances,
+        }
+        newImportanceHistory = [...newImportanceHistory, snapshot].slice(-20)
+      }
+
       // Flip tracking
       const prevPreds = get().previousPredictions
       let flips = 0
@@ -286,7 +271,8 @@ export const useStore = create<AppState>((set, get) => ({
         totalIterations: totalIterations + 1,
         selectThreshold: get().histogramData ? get().selectThreshold : defaultSelect,
         rejectThreshold: get().histogramData ? get().rejectThreshold : defaultReject,
-        activeStage: 'learn',
+        featureImportances: newImportances,
+        featureImportanceHistory: newImportanceHistory,
       })
     } catch (e) {
       console.error('Failed to fetch histogram:', e)
@@ -320,22 +306,9 @@ export const useStore = create<AppState>((set, get) => ({
       }
     }
 
-    // Create commit
-    const counts = computeCounts(states, sources, blocks.length)
-    const newCommit: Commit = {
-      id: get().commits.length,
-      type: 'threshold',
-      timestamp: Date.now(),
-      states: new Map(states),
-      sources: new Map(sources),
-      counts,
-    }
-
     set({
       blockSelectionStates: states,
       blockSelectionSources: sources,
-      commits: [...get().commits, newCommit],
-      activeCommitId: newCommit.id,
       activeStage: 'apply',
     })
 
@@ -350,15 +323,111 @@ export const useStore = create<AppState>((set, get) => ({
 
   setIsDraggingThreshold: (dragging) => set({ isDraggingThreshold: dragging }),
 
-  setActiveStage: (stage) => set({ activeStage: stage }),
+  setActiveStage: (stage) => {
+    set({ activeStage: stage })
+    get().selectFirstUntagged()
+  },
 
-  restoreCommit: (commitId) => {
-    const commit = get().commits.find((c) => c.id === commitId)
-    if (!commit) return
-    set({
-      blockSelectionStates: new Map(commit.states),
-      blockSelectionSources: new Map(commit.sources),
-      activeCommitId: commitId,
-    })
+  setHideTagged: (hide) => set({ hideTagged: hide }),
+
+  setShowDisagreementOnly: (show) => set({ showDisagreementOnly: show }),
+
+  // ---- Navigation ----
+
+  getFilteredBlocks: () => {
+    const s = get()
+    let list = s.blocks
+
+    if (s.activeStage === 'bootstrap' && s.diversityIds.size > 0) {
+      list = list.filter((b) => s.diversityIds.has(b.block_id))
+    }
+
+    if (s.activeStage === 'learn') {
+      list = [...list].sort((a, b) => {
+        const sa = s.similarityScores.get(a.block_id)
+        const sb = s.similarityScores.get(b.block_id)
+        return (sa !== undefined ? Math.abs(sa) : Infinity) -
+               (sb !== undefined ? Math.abs(sb) : Infinity)
+      })
+    } else if (s.activeStage === 'apply') {
+      list = [...list].sort((a, b) => {
+        const sa = s.similarityScores.get(a.block_id)
+        const sb = s.similarityScores.get(b.block_id)
+        return (sb !== undefined ? Math.abs(sb) : -Infinity) -
+               (sa !== undefined ? Math.abs(sa) : -Infinity)
+      })
+    }
+
+    if (s.showDisagreementOnly) {
+      list = list.filter((b) => {
+        const vote = s.committeeVotes.get(b.block_id)
+        return vote !== undefined && vote.vote_entropy > 0
+      })
+    }
+
+    if (s.hideTagged) {
+      list = list.filter((b) => {
+        if (s.blockSelectionStates.has(b.block_id)) return false
+        const score = s.similarityScores.get(b.block_id)
+        if (score !== undefined && (score >= s.selectThreshold || score <= s.rejectThreshold)) return false
+        return true
+      })
+    }
+
+    return list
+  },
+
+  selectFirstUntagged: () => {
+    const list = get().getFilteredBlocks()
+    const states = get().blockSelectionStates
+    for (const b of list) {
+      if (!states.has(b.block_id)) {
+        set({ currentBlockId: b.block_id })
+        return
+      }
+    }
+    // All tagged — select the first item if any
+    if (list.length > 0) {
+      set({ currentBlockId: list[0].block_id })
+    }
+  },
+
+  selectNextUntagged: () => {
+    const { currentBlockId, blockSelectionStates } = get()
+    if (currentBlockId === null) return
+    const list = get().getFilteredBlocks()
+    const idx = list.findIndex((b) => b.block_id === currentBlockId)
+    for (let i = 1; i < list.length; i++) {
+      const next = list[(idx + i) % list.length]
+      if (!blockSelectionStates.has(next.block_id)) {
+        set({ currentBlockId: next.block_id })
+        return
+      }
+    }
+  },
+
+  labelBlock: async (blockId, state) => {
+    const { blockSelectionStates, activeStage } = get()
+    const currentState = blockSelectionStates.get(blockId)
+
+    // Toggle off if re-clicking same label
+    if (currentState === state) {
+      get().removeBlockSelection(blockId)
+      get().fetchHistogram()
+      return
+    }
+
+    // Set the label
+    get().setBlockSelection(blockId, state, 'click')
+
+    if (activeStage === 'bootstrap') {
+      // Bootstrap: advance immediately, fire-and-forget retrain (sort doesn't depend on scores)
+      get().selectNextUntagged()
+      get().fetchHistogram()
+    } else {
+      // Learn/Apply: await retrain so scores update, THEN pick the new top item
+      await get().fetchHistogram()
+      get().selectFirstUntagged()
+    }
   },
 }))

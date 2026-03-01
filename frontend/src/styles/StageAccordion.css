@@ -1,74 +1,245 @@
-.stage-accordion {
+/* ============================================================================
+ * STAGE SELECTOR - Notebook Tab Style
+ * ============================================================================ */
+
+.stage-selector {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
 }
 
-.stage-tabs {
+/* ============================================================================
+ * ROW 1: NOTEBOOK-STYLE STAGE TABS
+ * ============================================================================ */
+
+.stage-selector__tabs {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 0;
+  background: transparent;
+  position: relative;
   flex-shrink: 0;
 }
 
-.stage-tab {
+/* Bottom border line that tabs sit on */
+.stage-selector__tabs::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-border, #e5e7eb);
+  z-index: 1;
+}
+
+.stage-selector__tab {
   flex: 1;
-  padding: 8px 4px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+  background: #f1f5f9;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  z-index: 2;
+}
+
+.stage-selector__tab:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.stage-selector__tab:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+/* Active state - tab rises up and connects to content below */
+.stage-selector__tab--active {
+  background: white;
+  border-color: #3b82f6;
+  box-shadow: 0 -2px 6px rgba(59, 130, 246, 0.15);
+  z-index: 10;
+}
+
+/* White overlay to cover the bottom border line */
+.stage-selector__tab--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: white;
+  z-index: 3;
+}
+
+.stage-selector__tab--active:hover:not(:disabled) {
+  background: white;
+}
+
+.stage-selector__tab--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+/* Stage Number */
+.stage-selector__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.stage-selector__tab--active .stage-selector__number {
+  color: #3b82f6;
+}
+
+.stage-selector__tab--disabled .stage-selector__number {
+  color: #9ca3af;
+}
+
+/* Stage Label */
+.stage-selector__label {
   font-size: 11px;
   font-weight: 500;
-  border-radius: 0;
-  background: transparent;
-  color: var(--color-text-secondary);
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s;
+  color: #6b7280;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.stage-tab:hover {
-  color: var(--color-text);
-  background: var(--color-surface-hover);
+.stage-selector__tab--active .stage-selector__label {
+  color: #1e293b;
+  font-weight: 600;
 }
 
-.stage-tab.active {
-  color: var(--color-text);
-  border-bottom-color: #4CAF50;
-}
+/* ============================================================================
+ * ROW 2: SORT INDICATOR (read-only)
+ * ============================================================================ */
 
-.stage-controls {
+.stage-selector__sort-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--color-border);
+  justify-content: center;
+  padding: 4px 8px 2px;
+  background-color: white;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-top: none;
+  border-bottom: none;
   flex-shrink: 0;
 }
 
-.stage-controls label {
+.stage-selector__sort-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e293b;
+  padding: 5px 8px;
+}
+
+/* ============================================================================
+ * ROW 3: CHECKBOXES
+ * ============================================================================ */
+
+.stage-selector__checkboxes {
   display: flex;
   align-items: center;
-  gap: 4px;
+  padding: 2px 8px 4px;
+  justify-content: space-between;
+  background-color: white;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-top: none;
+  flex-shrink: 0;
+}
+
+.stage-selector__checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
-  color: var(--color-text-secondary);
+  font-weight: 500;
+  color: #6b7280;
   cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
 }
 
-.stage-controls label input {
+.stage-selector__checkbox-label:hover {
+  color: #374151;
+}
+
+.stage-selector__checkbox-label:hover input[type="checkbox"] {
+  border-color: #94a3b8;
+}
+
+.stage-selector__checkbox-label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  background: white;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
   margin: 0;
+  vertical-align: middle;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.bootstrap-toggle {
-  font-size: 11px;
-  padding: 3px 8px;
-  border: 1px solid var(--color-border);
+.stage-selector__checkbox-label input[type="checkbox"]:hover {
+  border-color: #94a3b8;
 }
 
-.bootstrap-toggle.active {
-  background: var(--color-human);
-  color: white;
-  border-color: var(--color-human);
+.stage-selector__checkbox-label input[type="checkbox"]:checked {
+  background: white;
+  border-color: #3b82f6;
 }
 
-.item-list-container {
+.stage-selector__checkbox-label input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3.5px;
+  top: 0.5px;
+  width: 4px;
+  height: 7px;
+  border: solid #3b82f6;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.stage-selector__legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #CC79A7;
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+ * LIST SECTION
+ * ============================================================================ */
+
+.stage-selector__list {
   flex: 1;
   min-height: 0;
   overflow: hidden;

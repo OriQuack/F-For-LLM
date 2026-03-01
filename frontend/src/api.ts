@@ -26,6 +26,13 @@ interface BlockListResponse {
   blocks: CodeBlock[]
   metric_columns: string[]
   total_blocks: number
+  all_metric_columns: string[]
+  filter_summary: {
+    removed_low_variance: string[]
+    removed_correlated: { removed: string; kept_instead: string }[]
+    original_count: number
+    surviving_count: number
+  } | null
 }
 
 export async function fetchBlocks(): Promise<BlockListResponse> {

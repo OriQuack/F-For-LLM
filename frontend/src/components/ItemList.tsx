@@ -1,15 +1,11 @@
-import { useRef, useCallback, useMemo } from 'react'
+import { useRef, useCallback, useMemo, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useStore } from '../store'
 import { TagIndicator, DisagreementIndicator } from './Indicators'
 import type { CodeBlock, SelectionState } from '../types'
 import '../styles/ItemList.css'
 
-interface Props {
-  hideTagged: boolean
-}
-
-export default function ItemList({ hideTagged }: Props) {
+export default function ItemList() {
   const blocks = useStore((s) => s.blocks)
   const currentBlockId = useStore((s) => s.currentBlockId)
   const setCurrentBlock = useStore((s) => s.setCurrentBlock)
@@ -20,50 +16,17 @@ export default function ItemList({ hideTagged }: Props) {
   const committeeVotes = useStore((s) => s.committeeVotes)
   const selectThreshold = useStore((s) => s.selectThreshold)
   const rejectThreshold = useStore((s) => s.rejectThreshold)
+  const hideTagged = useStore((s) => s.hideTagged)
+  const showDisagreementOnly = useStore((s) => s.showDisagreementOnly)
 
   const parentRef = useRef<HTMLDivElement>(null)
+  const filteredBlocksRef = useRef<CodeBlock[]>([])
 
   const filteredBlocks = useMemo(() => {
-    let list = blocks
+    return useStore.getState().getFilteredBlocks()
+  }, [blocks, activeStage, diversityIds, similarityScores, selectionStates, selectThreshold, rejectThreshold, hideTagged, showDisagreementOnly, committeeVotes])
 
-    // In bootstrap diversity mode, only show diversity items
-    if (activeStage === 'bootstrap' && diversityIds.size > 0) {
-      // Show all but diversity items first if we have scores
-      if (similarityScores.size === 0) {
-        list = blocks.filter((b) => diversityIds.has(b.block_id))
-      }
-    }
-
-    if (activeStage === 'learn') {
-      // Sort by |score| ascending (most uncertain first)
-      list = [...list].sort((a, b) => {
-        const sa = similarityScores.get(a.block_id)
-        const sb = similarityScores.get(b.block_id)
-        return (sa !== undefined ? Math.abs(sa) : Infinity) -
-               (sb !== undefined ? Math.abs(sb) : Infinity)
-      })
-    } else if (activeStage === 'apply') {
-      // Sort by |score| descending (most confident first)
-      list = [...list].sort((a, b) => {
-        const sa = similarityScores.get(a.block_id)
-        const sb = similarityScores.get(b.block_id)
-        return (sb !== undefined ? Math.abs(sb) : -Infinity) -
-               (sa !== undefined ? Math.abs(sa) : -Infinity)
-      })
-    }
-
-    if (hideTagged) {
-      list = list.filter((b) => {
-        // Hide if any committed tag exists (click or threshold)
-        if (selectionStates.has(b.block_id)) return false
-        // Hide if live-projected by thresholds
-        const s = similarityScores.get(b.block_id)
-        if (s !== undefined && (s >= selectThreshold || s <= rejectThreshold)) return false
-        return true
-      })
-    }
-    return list
-  }, [blocks, activeStage, diversityIds, similarityScores, selectionStates, selectThreshold, rejectThreshold, hideTagged])
+  filteredBlocksRef.current = filteredBlocks
 
   const virtualizer = useVirtualizer({
     count: filteredBlocks.length,
@@ -71,6 +34,14 @@ export default function ItemList({ hideTagged }: Props) {
     estimateSize: () => 32,
     overscan: 10,
   })
+
+  useEffect(() => {
+    if (currentBlockId === null) return
+    const idx = filteredBlocksRef.current.findIndex((b) => b.block_id === currentBlockId)
+    if (idx >= 0) {
+      virtualizer.scrollToIndex(idx, { align: 'auto' })
+    }
+  }, [currentBlockId])
 
   const handleClick = useCallback(
     (block: CodeBlock) => {
@@ -81,7 +52,6 @@ export default function ItemList({ hideTagged }: Props) {
 
   return (
     <div className="item-list" ref={parentRef}>
-      <div className="item-count-badge">{filteredBlocks.length} blocks</div>
       <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
         {virtualizer.getVirtualItems().map((vItem) => {
           const block = filteredBlocks[vItem.index]
@@ -125,7 +95,7 @@ export default function ItemList({ hideTagged }: Props) {
                 <DisagreementIndicator voteInfo={committeeVotes.get(block.block_id)} />
               )}
               <TagIndicator state={effectiveState} isAuto={isProjected} />
-              {score !== undefined && (
+              {score !== undefined && activeStage !== 'bootstrap' && (
                 <span className="item-score">{score.toFixed(2)}</span>
               )}
             </div>
