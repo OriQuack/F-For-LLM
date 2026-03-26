@@ -7,7 +7,11 @@ Interactive tool for labeling code blocks as human-written or LLM-generated usin
 ### 1. Generate data
 
 ```bash
-python pipeline/generate_mock.py
+python -m pipeline.build_dataset \
+  --languages python \
+  --skip-codechef \
+  --skip-aigcodeset \
+  --humanvsai-limit-rows 2000
 ```
 
 ### 2. Start the backend

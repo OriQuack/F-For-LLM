@@ -1,4 +1,4 @@
-"""Data service — loads blocks.parquet and metrics.parquet."""
+"""Data service — loads blocks.parquet, metrics.parquet, and labels.parquet."""
 
 import numpy as np
 import polars as pl
@@ -13,11 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class DataService:
-    """Loads and serves block and metric data."""
+    """Loads and serves block, metric, and label data."""
 
     def __init__(self):
         self._blocks_df: Optional[pl.DataFrame] = None
         self._metrics_lazy: Optional[pl.LazyFrame] = None
+        self._labels_df: Optional[pl.DataFrame] = None
+
         self._metric_columns: List[str] = []
         self._all_metric_columns: List[str] = []
         self._filter_result: Optional[FilterResult] = None
@@ -29,6 +31,7 @@ class DataService:
 
         blocks_path = data_dir / "blocks.parquet"
         metrics_path = data_dir / "metrics.parquet"
+        labels_path = data_dir / "labels.parquet"
 
         if not blocks_path.exists():
             raise FileNotFoundError(f"blocks.parquet not found at {blocks_path}")
@@ -38,12 +41,10 @@ class DataService:
 
         if metrics_path.exists():
             self._metrics_lazy = pl.scan_parquet(metrics_path)
-            # Discover metric columns (all except block_id)
             schema = pl.read_parquet_schema(metrics_path)
             all_cols = [c for c in schema if c != "block_id"]
             self._all_metric_columns = all_cols
 
-            # Run unsupervised feature filter
             if all_cols:
                 metrics_df = self._metrics_lazy.collect()
                 matrix = np.column_stack([
@@ -65,16 +66,32 @@ class DataService:
         else:
             logger.warning("metrics.parquet not found — metric features unavailable")
 
+        if labels_path.exists():
+            self._labels_df = pl.read_parquet(labels_path)
+            logger.info(f"Loaded {len(self._labels_df)} labels")
+        else:
+            logger.warning("labels.parquet not found — offline evaluation metadata unavailable")
+
         self._ready = True
 
     def is_ready(self) -> bool:
         return self._ready
 
     def get_all_blocks(self) -> pl.DataFrame:
-        """Return block metadata (without code column for list performance)."""
+        """Return block metadata without code column."""
         assert self._blocks_df is not None
-        cols = [c for c in self._blocks_df.columns if c != "code"]
-        return self._blocks_df.select(cols)
+        preferred_cols = [
+            "block_id",
+            "file_id",
+            "file_path",
+            "block_type",
+            "block_name",
+            "language",
+            "start_line",
+            "end_line",
+        ]
+        existing = [c for c in preferred_cols if c in self._blocks_df.columns]
+        return self._blocks_df.select(existing)
 
     def get_block_code(self, block_id: int) -> Optional[str]:
         """Return code text for a single block."""
@@ -99,6 +116,12 @@ class DataService:
         return self._metrics_lazy.filter(
             pl.col("block_id").is_in(block_ids)
         ).collect()
+
+    def get_labels(self, block_ids: List[int]) -> Optional[pl.DataFrame]:
+        """Return labels DataFrame for given block IDs."""
+        if self._labels_df is None:
+            return None
+        return self._labels_df.filter(pl.col("block_id").is_in(block_ids))
 
     @property
     def metric_columns(self) -> List[str]:

@@ -141,10 +141,16 @@ class ClassificationService:
 
         committee_votes_response = None
         if rf is not None or mlp is not None:
-            X_scaled = scaler.transform(metrics_matrix)
+            ### wrong double scaling ..?
+            ##X_scaled = scaler.transform(metrics_matrix)
+            ##preds = self.committee_service.predict_with_committee(
+            ##    X_scaled, scores, rf, mlp, committee_scaler
+            ##)
+            ###
             preds = self.committee_service.predict_with_committee(
-                X_scaled, scores, rf, mlp, committee_scaler
+                metrics_matrix, scores, rf, mlp, committee_scaler
             )
+            
             item_ids = [str(int(bid)) for bid in block_ids_arr]
             votes_dict = self.committee_service.get_vote_info_dict(item_ids, preds)
             committee_votes_response = {
