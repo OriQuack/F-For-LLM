@@ -5,7 +5,7 @@
 1. 문제에 대해 인간(학생) 코드와 llm 코드를 block (함수 등) 별로 분해 
 <pipeline/loaders/> <pipeline/build_dataset.py> <pipeline/extract_block.py> <pipeline/schema>
 
-2. 바로 이어서 Block 별로 Metric을 뽑아냄
+2. 바로 이어서 Block 별로 Metric을 뽑아냄, metric 종류는 다음 경로에 있는 곳에 별로 정리함.
 <pipeline/metrics/>
 
 3. 프론트엔드에서 사용자가 유의미한 것을 추림 (label 생성), 모델 학습, (이후 과정 생략) ...
