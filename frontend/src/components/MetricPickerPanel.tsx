@@ -62,6 +62,25 @@ export default function MetricPickerPanel() {
     setHovered(null)
   }, [])
 
+  const handleClickMetrics = useCallback((pair: [string, string]) => {
+    const [a, b] = pair
+    const aEnabled = enabledFeatures.has(a)
+    const bEnabled = enabledFeatures.has(b)
+
+    if (aEnabled && bEnabled) {
+      const cvOf = (name: string) => {
+        const v = filterSummary?.variances?.[name] ?? 0
+        const m = Math.abs(filterSummary?.means?.[name] ?? 0)
+        return m > 1e-10 ? Math.sqrt(v) / m : Math.sqrt(v)
+      }
+      const toDisable = cvOf(a) <= cvOf(b) ? a : b
+      setFeatureEnabled(toDisable, false)
+    } else {
+      if (!aEnabled) setFeatureEnabled(a, true)
+      if (!bEnabled) setFeatureEnabled(b, true)
+    }
+  }, [enabledFeatures, filterSummary, setFeatureEnabled])
+
   const tooltipData = useMemo(() => {
     if (!hovered) return null
     const name = hovered.name
@@ -75,20 +94,38 @@ export default function MetricPickerPanel() {
     return { name, importance, rank, rankDelta, variance, isLowVar, corrPair }
   }, [hovered, featureImportances, currentRanks, prevRanks, filterSummary])
 
+  const sortedMetrics = useMemo(() => {
+    const getScore = (name: string) => {
+      if (showImportance && featureImportances?.[name] !== undefined) {
+        return featureImportances[name]
+      }
+      const v = filterSummary?.variances?.[name] ?? 0
+      const m = Math.abs(filterSummary?.means?.[name] ?? 0)
+      return m > 1e-10 ? Math.sqrt(v) / m : Math.sqrt(v)
+    }
+
+    return [...allMetricColumns].sort((a, b) => {
+      const aEnabled = enabledFeatures.has(a) ? 1 : 0
+      const bEnabled = enabledFeatures.has(b) ? 1 : 0
+      if (aEnabled !== bEnabled) return bEnabled - aEnabled
+      return getScore(b) - getScore(a)
+    })
+  }, [allMetricColumns, enabledFeatures, showImportance, featureImportances, filterSummary])
+
   return (
     <div className="metric-picker-panel">
-      <h3>Metrics</h3>
+      <h3 className="subheader">Metric Picker</h3>
 
       {allMetricColumns.length > 0 ? (
         <div className="feature-checkbox-list">
           <div className="feature-row feature-row--header">
             <span className="feature-row__label">Feature</span>
             <span className="feature-row__glyphs">
-              {showStats && <span className="feature-glyph-header">CV</span>}
+              {showStats && <span className="feature-glyph-header">Coeff. of Variation</span>}
               {showImportance && <span className="feature-glyph-header">Importance</span>}
             </span>
           </div>
-          {allMetricColumns.map((name) => {
+          {sortedMetrics.map((name) => {
             const enabled = enabledFeatures.has(name)
             const importance = featureImportances?.[name]
             const hasImportance = showImportance && importance !== undefined && maxImportance > 0
@@ -168,6 +205,7 @@ export default function MetricPickerPanel() {
           highlightedMetrics={highlightedMetrics}
           enabledFeatures={enabledFeatures}
           onHoverMetrics={handleHoverMetrics}
+          onClickMetrics={handleClickMetrics}
         />
       )}
 

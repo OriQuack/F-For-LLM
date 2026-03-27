@@ -12,6 +12,7 @@ interface Props {
   highlightedMetrics: Set<string>
   enabledFeatures: Set<string>
   onHoverMetrics: (metrics: [string, string] | null) => void
+  onClickMetrics?: (pair: [string, string]) => void
 }
 
 const MIN_CELL = 4
@@ -24,7 +25,7 @@ const colorScale = scaleLinear<string>()
 
 const grayScale = scaleLinear<string>()
   .domain([0, 1])
-  .range(['#ffffff', '#999999'])
+  .range(['#ffffff', '#555555'])
   .clamp(true)
 
 export default function CorrelationMatrix({
@@ -32,6 +33,7 @@ export default function CorrelationMatrix({
   correlations,
   enabledFeatures,
   onHoverMetrics,
+  onClickMetrics,
 }: Props) {
   const { ref: containerRef, size: containerSize, hasMeasured } = useResizeObserver<HTMLDivElement>()
   const [tooltip, setTooltip] = useState<{
@@ -92,6 +94,17 @@ export default function CorrelationMatrix({
     setTooltip((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)
   }, [])
 
+  const handleClick = useCallback(
+    (e: React.MouseEvent<SVGRectElement>) => {
+      if (!onClickMetrics) return
+      const row = Number(e.currentTarget.dataset.row)
+      const col = Number(e.currentTarget.dataset.col)
+      if (row === col || isNaN(row) || isNaN(col)) return
+      onClickMetrics([metricNames[row], metricNames[col]])
+    },
+    [metricNames, onClickMetrics]
+  )
+
   const handleMouseLeave = useCallback(() => {
     setTooltip(null)
     onHoverMetrics(null)
@@ -101,7 +114,7 @@ export default function CorrelationMatrix({
 
   return (
     <div className="correlation-matrix" ref={containerRef}>
-      <div className="correlation-matrix__title">Correlation matrix</div>
+      <div className="correlation-matrix__title subsubheader">Correlation Matrix</div>
       {hasMeasured && cellSize > 0 && (
         <svg
           width={svgWidth}
@@ -129,6 +142,7 @@ export default function CorrelationMatrix({
                   onMouseEnter={handleMouseEnter}
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
+                  onClick={handleClick}
                   style={{ cursor: 'pointer' }}
                 />
               )

@@ -72,7 +72,6 @@ export default function CodeBlockViewer() {
   return (
     <div className="code-viewer">
       <div className="code-viewer-header">
-        <span className="file-path">{block.file_path}</span>
         <span className="lang-badge">{block.language}</span>
         <span className="line-range">L{block.start_line}-{block.end_line}</span>
         <span style={{ marginLeft: 'auto', fontWeight: 600, fontSize: 12 }}>{block.block_name}</span>

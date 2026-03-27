@@ -64,6 +64,26 @@ input, select {
   padding: 4px 8px;
 }
 
+/* ---- Panel heading hierarchy ---- */
+
+.subheader {
+  font-size: 14px;
+  color: var(--color-text);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.subsubheader {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

@@ -17,6 +17,7 @@ import {
   fetchSimilarityHistogram,
   fetchColdStartSuggestions,
 } from '../api'
+import { FLIP_HISTORY_WINDOW_SIZE } from '../lib/constants'
 
 // ============================================================================
 // HELPERS
@@ -271,6 +272,7 @@ export const useStore = create<AppState>((set, get) => ({
       let flips = 0
       let total = 0
       const newPreds = new Map<number, 'selected' | 'rejected'>()
+      const flipTransitions: Record<string, number> = {}
 
       for (const [id, score] of newScores) {
         const pred: 'selected' | 'rejected' = score > 0 ? 'selected' : 'rejected'
@@ -279,6 +281,8 @@ export const useStore = create<AppState>((set, get) => ({
           total++
           if (prevPreds.get(id) !== pred) {
             flips++
+            const transitionKey = `${prevPreds.get(id)!}\u2192${pred}`
+            flipTransitions[transitionKey] = (flipTransitions[transitionKey] || 0) + 1
           }
         }
       }
@@ -298,9 +302,10 @@ export const useStore = create<AppState>((set, get) => ({
         isBatch: false,
         iteration: totalIterations + 1,
         predictionCounts: { selected: selCount, rejected: rejCount },
+        flipTransitions,
       }
 
-      const newHistory = [...flipHistory, newEntry].slice(-10)
+      const newHistory = [...flipHistory, newEntry].slice(-FLIP_HISTORY_WINDOW_SIZE)
 
       // Auto-set thresholds based on score range
       const scoreArr = Array.from(newScores.values())

@@ -19,9 +19,9 @@ import '../styles/DecisionMarginHistogram.css'
 // ============================================================================
 const TAG_HISTOGRAM_SPACING = {
   svg: {
-    margin: HISTOGRAM_MARGIN,
-    xLabelOffset: 34,
-    yLabelOffset: -38,
+    margin: { top: 20, right: 10, bottom: 40, left: 50 },
+    xLabelOffset: 36,
+    yLabelOffset: -40,
     xTickOffset: 18
   }
 }
@@ -91,7 +91,7 @@ const DecisionMarginHistogram: React.FC = () => {
     if (!histogramData) return null
     const margin = TAG_HISTOGRAM_SPACING.svg.margin
     const width = containerSize.width
-    const height = 300
+    const height = containerSize.height
     return calculateHistogramLayout(histogramData, width, height, margin)
   }, [histogramData, containerSize])
 
@@ -234,6 +234,7 @@ const DecisionMarginHistogram: React.FC = () => {
 
   return (
     <div className="tag-automatic-panel">
+      <div className="subheader" style={{ marginBottom: 4 }}>Confidence Histogram</div>
       <div className="tag-panel__content">
         <div ref={containerRef} className="tag-panel__histogram-container">
           {histogramChart && hasMeasured ? (
@@ -241,7 +242,7 @@ const DecisionMarginHistogram: React.FC = () => {
               <svg
                 className="tag-panel__svg"
                 width={containerSize.width}
-                height={300}
+                height={containerSize.height}
                 style={{ overflow: 'visible' }}
               >
                 {/* SVG stripe patterns for auto-tagged zones */}

@@ -118,6 +118,9 @@ export function getMetricLabel(name: string): string {
   return METRIC_LABELS[name] ?? name
 }
 
+// Convergence indicator sliding window size
+export const FLIP_HISTORY_WINDOW_SIZE = 10
+
 export const STRIPE_PATTERN = {
   width: 12,
   height: 12,

@@ -46,7 +46,8 @@ export default function ConvergenceIndicator() {
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
 
-    const maxRate = 1.0
+    const rawMax = Math.max(...flipHistory.filter(e => e.iteration > 0).map(e => e.flipRate), 0)
+    const maxRate = Math.max(0.10, Math.ceil(rawMax * 1.2 * 20) / 20)
     const xScale = (i: number) => padding.left + (i / Math.max(1, flipHistory.length - 1)) * chartWidth
     const yScale = (rate: number) => padding.top + chartHeight - (rate / maxRate) * chartHeight
 
@@ -65,15 +66,17 @@ export default function ConvergenceIndicator() {
 
     const yTicks = [
       { y: yScale(0), label: '0%' },
-      { y: yScale(1.0), label: '100%' },
+      { y: yScale(maxRate), label: `${Math.round(maxRate * 100)}%` },
     ]
 
     const xAxisY = padding.top + chartHeight
 
-    const thresholdLines = THRESHOLD_LINES.map(t => ({
-      y: yScale(t),
-      label: `${Math.round(t * 100)}%`,
-    }))
+    const thresholdLines = THRESHOLD_LINES
+      .filter(t => t <= maxRate)
+      .map(t => ({
+        y: yScale(t),
+        label: `${Math.round(t * 100)}%`,
+      }))
 
     const xTicks = flipHistory.map((entry, i) => ({
       x: xScale(i),
@@ -113,7 +116,68 @@ export default function ConvergenceIndicator() {
       return { segments, x: xScale(i), iteration: entry.iteration, totalCount, flipRate: entry.flipRate }
     }).filter((bar): bar is NonNullable<typeof bar> => bar !== null)
 
-    return { linePoints, pathD, width, height, padding, yTicks, xTicks, xAxisY, thresholdLines, chartWidth, chartHeight, bars, barWidth }
+    // Flip transition links between consecutive bars
+    const links: Array<{
+      sourceX: number; sourceY: number
+      targetX: number; targetY: number
+      height: number
+      sourceColor: string; targetColor: string
+    }> = []
+
+    for (let i = 1; i < flipHistory.length; i++) {
+      const prevEntry = flipHistory[i - 1]
+      const currEntry = flipHistory[i]
+      if (!prevEntry.predictionCounts || !currEntry.predictionCounts || !currEntry.flipTransitions) continue
+
+      const prevBar = bars.find(b => b.iteration === prevEntry.iteration)
+      const currBar = bars.find(b => b.iteration === currEntry.iteration)
+      if (!prevBar || !currBar) continue
+
+      for (const [transitionKey, count] of Object.entries(currEntry.flipTransitions)) {
+        if (count === 0) continue
+        const [fromCat, toCat] = transitionKey.split('\u2192')
+        const sourceSegment = prevBar.segments.find(s => s.category === fromCat)
+        const targetSegment = currBar.segments.find(s => s.category === toCat)
+        if (!sourceSegment || !targetSegment) continue
+
+        const prevTotal = Object.values(prevEntry.predictionCounts).reduce((a, b) => a + b, 0)
+        const linkHeight = Math.max(1, (count / prevTotal) * chartHeight)
+
+        links.push({
+          sourceX: sourceSegment.x + barWidth,
+          sourceY: sourceSegment.y,
+          targetX: targetSegment.x,
+          targetY: targetSegment.y,
+          height: linkHeight,
+          sourceColor: (CATEGORY_CONFIG.colors as Record<string, string>)[fromCat] || '#999',
+          targetColor: (CATEGORY_CONFIG.colors as Record<string, string>)[toCat] || '#999',
+        })
+      }
+    }
+
+    // Transparent hover gaps between consecutive bars
+    const gaps: Array<{
+      x: number; y: number; width: number; height: number
+      fromIteration: number; toIteration: number
+    }> = []
+
+    for (let i = 0; i < bars.length - 1; i++) {
+      const leftBar = bars[i]
+      const rightBar = bars[i + 1]
+      const gapX = leftBar.x + barWidth / 2
+      const gapWidth = rightBar.x - barWidth / 2 - gapX
+      if (gapWidth <= 0) continue
+      gaps.push({
+        x: gapX,
+        y: padding.top,
+        width: gapWidth,
+        height: chartHeight,
+        fromIteration: leftBar.iteration,
+        toIteration: rightBar.iteration,
+      })
+    }
+
+    return { linePoints, pathD, width, height, padding, yTicks, xTicks, xAxisY, thresholdLines, chartWidth, chartHeight, bars, links, gaps, barWidth }
   }, [flipHistory, containerSize.width, containerSize.height])
 
   if (flipHistory.length === 0) {
@@ -130,12 +194,23 @@ export default function ConvergenceIndicator() {
 
   return (
     <div ref={containerRef} className="convergence-indicator">
+      <div className="subheader" style={{ marginBottom: 4 }}>Stability Chart</div>
       {sparklineData && hasMeasured && (
         <svg
           className="convergence-indicator__sparkline"
           viewBox={`0 0 ${sparklineData.width} ${sparklineData.height}`}
           preserveAspectRatio="xMidYMid meet"
         >
+          {/* Gradient definitions for flip transition links */}
+          <defs>
+            {sparklineData.links.map((link, i) => (
+              <linearGradient key={`gradient-${i}`} id={`link-gradient-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={link.sourceColor} />
+                <stop offset="100%" stopColor={link.targetColor} />
+              </linearGradient>
+            ))}
+          </defs>
+
           {/* Threshold reference lines */}
           {sparklineData.thresholdLines.map((line, i) => (
             <g key={i}>
@@ -250,6 +325,87 @@ export default function ConvergenceIndicator() {
                 />
               ))}
             </g>
+          ))}
+
+          {/* Flip transition links between bars */}
+          {sparklineData.links.map((link, i) => (
+            <path
+              key={`link-${i}`}
+              d={`M ${link.sourceX},${link.sourceY}
+                  C ${(link.sourceX + link.targetX) / 2},${link.sourceY}
+                    ${(link.sourceX + link.targetX) / 2},${link.targetY}
+                    ${link.targetX},${link.targetY}
+                  L ${link.targetX},${link.targetY + link.height}
+                  C ${(link.sourceX + link.targetX) / 2},${link.targetY + link.height}
+                    ${(link.sourceX + link.targetX) / 2},${link.sourceY + link.height}
+                    ${link.sourceX},${link.sourceY + link.height}
+                  Z`}
+              fill={`url(#link-gradient-${i})`}
+              opacity={0.7}
+              style={{ pointerEvents: 'none' }}
+            />
+          ))}
+
+          {/* Transparent hover gaps between bars */}
+          {sparklineData.gaps.map((gap, gapIndex) => (
+            <rect
+              key={`gap-${gapIndex}`}
+              x={gap.x}
+              y={gap.y}
+              width={gap.width}
+              height={gap.height}
+              fill="transparent"
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={(e) => {
+                const midX = gap.x + gap.width / 2
+                const svgEl = e.currentTarget.closest('svg')
+                if (!svgEl) return
+                const pt = svgEl.createSVGPoint()
+                pt.x = e.clientX
+                pt.y = e.clientY
+                const svgP = pt.matrixTransform(svgEl.getScreenCTM()!.inverse())
+                const nearBarIndex = svgP.x < midX ? gapIndex : gapIndex + 1
+                const bar = sparklineData!.bars[nearBarIndex]
+                if (!bar) return
+                setHoveredBarIndex(nearBarIndex)
+                setTooltipPosition({ x: e.clientX, y: e.clientY })
+                setTooltipData({
+                  iteration: bar.iteration,
+                  segments: bar.segments.map(seg => ({
+                    category: seg.category, count: seg.count, color: seg.color, label: seg.label,
+                  })),
+                  total: bar.totalCount,
+                  flipRate: bar.iteration > 0 ? bar.flipRate : null,
+                })
+              }}
+              onMouseMove={(e) => {
+                const midX = gap.x + gap.width / 2
+                const svgEl = e.currentTarget.closest('svg')
+                if (!svgEl) return
+                const pt = svgEl.createSVGPoint()
+                pt.x = e.clientX
+                pt.y = e.clientY
+                const svgP = pt.matrixTransform(svgEl.getScreenCTM()!.inverse())
+                const nearBarIndex = svgP.x < midX ? gapIndex : gapIndex + 1
+                const bar = sparklineData!.bars[nearBarIndex]
+                if (!bar) return
+                setHoveredBarIndex(nearBarIndex)
+                setTooltipPosition({ x: e.clientX, y: e.clientY })
+                setTooltipData({
+                  iteration: bar.iteration,
+                  segments: bar.segments.map(seg => ({
+                    category: seg.category, count: seg.count, color: seg.color, label: seg.label,
+                  })),
+                  total: bar.totalCount,
+                  flipRate: bar.iteration > 0 ? bar.flipRate : null,
+                })
+              }}
+              onMouseLeave={() => {
+                setHoveredBarIndex(null)
+                setTooltipPosition(null)
+                setTooltipData(null)
+              }}
+            />
           ))}
 
           {/* Sparkline path */}

@@ -25,7 +25,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>F for LLM</h1>
+        <h1><span style={{ color: '#e53935', fontFamily: "'Caveat', cursive" }}>F</span>&nbsp; for LLM</h1>
       </header>
       <ClassifierView />
     </div>
