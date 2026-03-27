@@ -1,4 +1,4 @@
-# Code Authorship Classifier
+# F for LLM
 
 Interactive tool for labeling code blocks as human-written or LLM-generated using active learning (SVM + RF/MLP committee).
 
