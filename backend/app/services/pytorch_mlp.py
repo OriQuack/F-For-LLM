@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class _MLPNetwork(nn.Module):
     """Simple feedforward network for classification."""
 
-    def __init__(self, input_dim: int, hidden_layer_sizes: Tuple[int, ...], n_classes: int):
+    def __init__(self, input_dim: int, hidden_layer_sizes: Tuple[int, ...], n_classes: int, dropout: float = 0.0):
         super().__init__()
 
         layers = []
@@ -33,6 +33,8 @@ class _MLPNetwork(nn.Module):
         for hidden_dim in hidden_layer_sizes:
             layers.append(nn.Linear(prev_dim, hidden_dim))
             layers.append(nn.ReLU())
+            if dropout > 0:
+                layers.append(nn.Dropout(dropout))
             prev_dim = hidden_dim
 
         layers.append(nn.Linear(prev_dim, n_classes))
@@ -52,21 +54,23 @@ class WeightedMLPClassifier:
 
     Parameters
     ----------
-    hidden_layer_sizes : tuple of int, default=(32, 16)
+    hidden_layer_sizes : tuple of int, default=(16, 16)
         The number of neurons in each hidden layer.
     alpha : float, default=0.01
         L2 regularization strength (weight_decay in Adam optimizer).
+    dropout : float, default=0.0
+        Dropout probability after each hidden layer (0.0 = no dropout).
     max_iter : int, default=500
         Maximum number of training epochs.
     early_stopping : bool, default=True
         Whether to use early stopping based on validation loss.
     validation_fraction : float, default=0.2
         Fraction of training data for validation (when early_stopping=True).
-    n_iter_no_change : int, default=20
+    n_iter_no_change : int, default=10
         Number of epochs with no improvement before stopping.
     learning_rate_init : float, default=0.001
         Initial learning rate for Adam optimizer.
-    batch_size : int, default=32
+    batch_size : int, default=64
         Mini-batch size for training.
     random_state : int, optional
         Random seed for reproducibility.
@@ -74,18 +78,20 @@ class WeightedMLPClassifier:
 
     def __init__(
         self,
-        hidden_layer_sizes: Tuple[int, ...] = (32, 16),
+        hidden_layer_sizes: Tuple[int, ...] = (16, 16),
         alpha: float = 0.01,
+        dropout: float = 0.0,
         max_iter: int = 500,
         early_stopping: bool = True,
         validation_fraction: float = 0.2,
-        n_iter_no_change: int = 20,
+        n_iter_no_change: int = 10,
         learning_rate_init: float = 0.001,
-        batch_size: int = 32,
+        batch_size: int = 64,
         random_state: Optional[int] = None
     ):
         self.hidden_layer_sizes = hidden_layer_sizes
         self.alpha = alpha
+        self.dropout = dropout
         self.max_iter = max_iter
         self.early_stopping = early_stopping
         self.validation_fraction = validation_fraction
@@ -166,7 +172,7 @@ class WeightedMLPClassifier:
 
         # Initialize model
         input_dim = X_train.shape[1]
-        self._model = _MLPNetwork(input_dim, self.hidden_layer_sizes, n_classes)
+        self._model = _MLPNetwork(input_dim, self.hidden_layer_sizes, n_classes, self.dropout)
 
         # Optimizer with weight_decay for L2 regularization (matches sklearn's alpha)
         optimizer = torch.optim.Adam(

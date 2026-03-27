@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { useStore } from '../store'
+import { getMetricLabel } from '../lib/constants'
 import CorrelationMatrix from './CorrelationMatrix'
+import Tooltip from './Tooltip'
 import '../styles/MetricPickerPanel.css'
 
 export default function MetricPickerPanel() {
@@ -20,101 +22,130 @@ export default function MetricPickerPanel() {
     setHighlightedMetrics(pair ? new Set(pair) : new Set())
   }, [])
 
-  // Max importance for bar scaling
+  const [hovered, setHovered] = useState<{
+    name: string; x: number; y: number
+  } | null>(null)
+
   const maxImportance = featureImportances
     ? Math.max(...Object.values(featureImportances), 0)
     : 0
 
-  // Rank computation from current and previous importance snapshots
-  const currentRanks = featureImportances
-    ? Object.entries(featureImportances)
-        .sort((a, b) => b[1] - a[1])
-        .reduce<Record<string, number>>((acc, [n], i) => { acc[n] = i + 1; return acc }, {})
-    : null
+  const currentRanks = useMemo(() =>
+    featureImportances
+      ? Object.entries(featureImportances)
+          .sort((a, b) => b[1] - a[1])
+          .reduce<Record<string, number>>((acc, [n], i) => { acc[n] = i + 1; return acc }, {})
+      : null,
+    [featureImportances]
+  )
 
-  const prevSnapshot = featureImportanceHistory.length >= 2
-    ? featureImportanceHistory[featureImportanceHistory.length - 2]
-    : null
-  const prevRanks = prevSnapshot
-    ? Object.entries(prevSnapshot.importances)
-        .sort((a, b) => b[1] - a[1])
-        .reduce<Record<string, number>>((acc, [n], i) => { acc[n] = i + 1; return acc }, {})
-    : null
+  const prevRanks = useMemo(() => {
+    const prev = featureImportanceHistory.length >= 2
+      ? featureImportanceHistory[featureImportanceHistory.length - 2]
+      : null
+    return prev
+      ? Object.entries(prev.importances)
+          .sort((a, b) => b[1] - a[1])
+          .reduce<Record<string, number>>((acc, [n], i) => { acc[n] = i + 1; return acc }, {})
+      : null
+  }, [featureImportanceHistory])
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent, name: string) => {
+    setHovered({ name, x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    setHovered((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    setHovered(null)
+  }, [])
+
+  const tooltipData = useMemo(() => {
+    if (!hovered) return null
+    const name = hovered.name
+    const importance = featureImportances?.[name]
+    const rank = currentRanks?.[name]
+    const prevRank = prevRanks?.[name]
+    const rankDelta = rank != null && prevRank != null ? prevRank - rank : 0
+    const variance = filterSummary?.variances?.[name]
+    const isLowVar = filterSummary?.removed_low_variance?.includes(name)
+    const corrPair = filterSummary?.removed_correlated?.find(p => p.removed === name)
+    return { name, importance, rank, rankDelta, variance, isLowVar, corrPair }
+  }, [hovered, featureImportances, currentRanks, prevRanks, filterSummary])
 
   return (
     <div className="metric-picker-panel">
       <h3>Metrics</h3>
 
-      {/* Feature Checkboxes */}
       {allMetricColumns.length > 0 ? (
         <div className="feature-checkbox-list">
-          {showImportance && featureImportances && maxImportance > 0 && (
-            <div className="feature-list__legend">
-              <span>Feature importance</span>
-              <div className="feature-importance-bar-bg">
-                <div className="feature-importance-bar-fill" style={{ width: '60%' }} />
-              </div>
-            </div>
-          )}
+          <div className="feature-row feature-row--header">
+            <span className="feature-row__label">Feature</span>
+            <span className="feature-row__glyphs">
+              {showStats && <span className="feature-glyph-header">CV</span>}
+              {showImportance && <span className="feature-glyph-header">Importance</span>}
+            </span>
+          </div>
           {allMetricColumns.map((name) => {
             const enabled = enabledFeatures.has(name)
             const importance = featureImportances?.[name]
-            const hasDetails = showImportance && enabled && importance !== undefined && maxImportance > 0
-            const pct = hasDetails ? (importance / maxImportance) * 100 : 0
-            const fmtPct = hasDetails ? (importance * 100).toFixed(1) + '%' : ''
-            const rank = currentRanks?.[name]
-            const prevRank = prevRanks?.[name]
-            const rankDelta = rank != null && prevRank != null ? prevRank - rank : 0
-
+            const hasImportance = showImportance && importance !== undefined && maxImportance > 0
+            const impPct = hasImportance ? (importance / maxImportance) * 100 : 0
             const variance = filterSummary?.variances?.[name]
+            const mean = filterSummary?.means?.[name]
+            const cv = variance !== undefined
+              ? (mean !== undefined && Math.abs(mean) > 1e-10 ? Math.sqrt(variance) / Math.abs(mean) : Math.sqrt(variance))
+              : undefined
             const isHighlighted = highlightedMetrics.has(name)
 
             return (
               <div
                 key={name}
-                className={`feature-block${enabled ? ' feature-block--enabled' : ''}${hasDetails ? ' feature-block--detailed' : ''}${isHighlighted ? ' feature-block--highlighted' : ''}`}
+                className={`feature-row${enabled ? ' feature-row--enabled' : ''}${isHighlighted ? ' feature-row--highlighted' : ''}`}
+                onMouseEnter={(e) => handleMouseEnter(e, name)}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
               >
-                {/* Row 1: checkbox + name */}
-                <label className="feature-block__label" title={name}>
+                <label className="feature-row__label">
                   <input
                     type="checkbox"
                     checked={enabled}
                     onChange={(e) => setFeatureEnabled(name, e.target.checked)}
                   />
-                  <span className={enabled ? '' : 'feature-name--disabled'}>{name}</span>
+                  <span className={enabled ? '' : 'feature-name--disabled'}>{getMetricLabel(name)}</span>
                 </label>
 
-                {/* Inline stats: variance (bootstrap only) */}
-                {showStats && variance !== undefined && (
-                  <div className="feature-block__stats">
-                    <span className="feature-stat feature-stat--var">
-                      var: {variance < 0.001 ? variance.toExponential(1) : variance.toFixed(3)}
-                    </span>
-                  </div>
-                )}
+                {!enabled && (() => {
+                  const isLowVar = filterSummary?.removed_low_variance?.includes(name)
+                  const corrPair = filterSummary?.removed_correlated?.find(p => p.removed === name)
+                  if (isLowVar) return <span className="feature-row__auto-reason">Low variance</span>
+                  if (corrPair) return <span className="feature-row__auto-reason">≈ {getMetricLabel(corrPair.kept_instead)}</span>
+                  return null
+                })()}
 
-                {/* Importance bar + rank (only when enabled AND importance exists) */}
-                {hasDetails && (
-                  <div className="feature-block__details">
-                    <div className="feature-block__bar-row">
-                      <div className="feature-importance-bar-bg">
-                        <div
-                          className="feature-importance-bar-fill"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="feature-importance-value">{fmtPct}</span>
-                    </div>
-                    <span className="feature-block__rank">
-                      rank #{rank}
-                      {rankDelta !== 0 && (
-                        <span className={rankDelta > 0 ? 'rank-up' : 'rank-down'}>
-                          {rankDelta > 0 ? ` \u2191${rankDelta}` : ` \u2193${Math.abs(rankDelta)}`}
-                        </span>
-                      )}
+                <span className="feature-row__glyphs">
+                  {showStats && cv !== undefined && (
+                    <span className={`feature-glyph-var${cv < 0.01 ? ' feature-glyph-var--low' : ''}`}>
+                      {cv < 0.01 ? cv.toExponential(1) : cv.toFixed(2)}
                     </span>
-                  </div>
-                )}
+                  )}
+
+                  {hasImportance && (
+                    <span className="feature-glyph-imp">
+                      <span className="feature-glyph-imp__bar">
+                        <span
+                          className="feature-glyph-imp__fill"
+                          style={{ width: `${impPct}%` }}
+                        />
+                      </span>
+                      <span className="feature-glyph-imp__pct">
+                        {(importance * 100).toFixed(0)}%
+                      </span>
+                    </span>
+                  )}
+                </span>
               </div>
             )
           })}
@@ -129,13 +160,48 @@ export default function MetricPickerPanel() {
           No metric columns available
         </p>
       )}
+
       {showStats && filterSummary?.correlations && (
         <CorrelationMatrix
           metricNames={allMetricColumns}
           correlations={filterSummary.correlations}
           highlightedMetrics={highlightedMetrics}
+          enabledFeatures={enabledFeatures}
           onHoverMetrics={handleHoverMetrics}
         />
+      )}
+
+      {hovered && tooltipData && (
+        <Tooltip x={hovered.x} y={hovered.y}>
+          <Tooltip.Header>{getMetricLabel(tooltipData.name)}</Tooltip.Header>
+          <Tooltip.Summary>{tooltipData.name}</Tooltip.Summary>
+          {tooltipData.variance !== undefined && (
+            <Tooltip.Row>
+              Variance: {tooltipData.variance < 0.001
+                ? tooltipData.variance.toExponential(2)
+                : tooltipData.variance.toFixed(4)}
+              {tooltipData.isLowVar && <span style={{ color: '#ef6c00', fontStyle: 'italic' }}> (low)</span>}
+            </Tooltip.Row>
+          )}
+          {tooltipData.corrPair && (
+            <Tooltip.Row>Correlated with: {getMetricLabel(tooltipData.corrPair.kept_instead)}</Tooltip.Row>
+          )}
+          {tooltipData.importance !== undefined && (
+            <>
+              <Tooltip.Row>Importance: {(tooltipData.importance * 100).toFixed(1)}%</Tooltip.Row>
+              {tooltipData.rank != null && (
+                <Tooltip.Row>
+                  Rank #{tooltipData.rank}
+                  {tooltipData.rankDelta !== 0 && (
+                    <span className={tooltipData.rankDelta > 0 ? 'rank-up' : 'rank-down'}>
+                      {tooltipData.rankDelta > 0 ? ` \u2191${tooltipData.rankDelta}` : ` \u2193${Math.abs(tooltipData.rankDelta)}`}
+                    </span>
+                  )}
+                </Tooltip.Row>
+              )}
+            </>
+          )}
+        </Tooltip>
       )}
     </div>
   )

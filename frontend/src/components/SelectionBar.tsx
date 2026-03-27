@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { COLORS } from '../lib/constants'
 import { getStripeGradient } from '../lib/color-utils'
+import Tooltip from './Tooltip'
 import type { CategoryCounts } from '../lib/histogram-utils'
 import '../styles/SelectionBar.css'
 
@@ -128,25 +129,10 @@ export default function SelectionBar({
         const seg = segments.find(s => s.category === hoveredCategory)
         if (!seg) return null
         return (
-          <div
-            style={{
-              position: 'fixed',
-              left: tooltipPosition.x + 12,
-              top: tooltipPosition.y - 12,
-              background: 'white',
-              border: '1px solid #d1d5db',
-              borderRadius: 4,
-              padding: '6px 10px',
-              fontSize: 13,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-              pointerEvents: 'none',
-              zIndex: 1000,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 2 }}>{seg.label}</div>
-            <div>{seg.count.toLocaleString()} blocks ({seg.percentage.toFixed(1)}%)</div>
-          </div>
+          <Tooltip x={tooltipPosition.x} y={tooltipPosition.y}>
+            <Tooltip.Header>{seg.label}</Tooltip.Header>
+            <Tooltip.Row>{seg.count.toLocaleString()} blocks ({seg.percentage.toFixed(1)}%)</Tooltip.Row>
+          </Tooltip>
         )
       })()}
     </div>

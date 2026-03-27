@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useFlipTracking } from '../hooks/useFlipTracking'
 import { useResizeObserver } from '../hooks/useResizeObserver'
 import { COLORS } from '../lib/constants'
+import Tooltip from './Tooltip'
 import '../styles/ConvergenceIndicator.css'
 
 const THRESHOLD_LINES = [0.10, 0.25, 0.50]
@@ -277,37 +278,19 @@ export default function ConvergenceIndicator() {
 
       {/* Tooltip */}
       {tooltipData && tooltipPosition && (
-        <div
-          className="convergence-indicator__tooltip"
-          style={{
-            position: 'fixed',
-            left: tooltipPosition.x + 12,
-            top: tooltipPosition.y - 12,
-            pointerEvents: 'none',
-            zIndex: 1000,
-          }}
-        >
-          <div className="convergence-indicator__tooltip-header">
-            Iteration {tooltipData.iteration}
-          </div>
+        <Tooltip x={tooltipPosition.x} y={tooltipPosition.y}>
+          <Tooltip.Header>Iteration {tooltipData.iteration}</Tooltip.Header>
           {tooltipData.flipRate !== null && (
-            <div className="convergence-indicator__tooltip-summary">
-              Flip Rate: {(tooltipData.flipRate * 100).toFixed(1)}%
-            </div>
+            <Tooltip.Summary>Flip Rate: {(tooltipData.flipRate * 100).toFixed(1)}%</Tooltip.Summary>
           )}
-          <div className="convergence-indicator__tooltip-summary">
-            Total: {formatCount(tooltipData.total)} blocks
-          </div>
+          <Tooltip.Summary>Total: {formatCount(tooltipData.total)} blocks</Tooltip.Summary>
           {tooltipData.segments.map((seg, i) => (
-            <div key={i} className="convergence-indicator__tooltip-row">
-              <span
-                className="convergence-indicator__tooltip-swatch"
-                style={{ backgroundColor: seg.color }}
-              />
+            <Tooltip.Row key={i}>
+              <Tooltip.Swatch color={seg.color} />
               {seg.label}: {formatCount(seg.count)}
-            </div>
+            </Tooltip.Row>
           ))}
-        </div>
+        </Tooltip>
       )}
     </div>
   )

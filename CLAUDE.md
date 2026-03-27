@@ -35,7 +35,7 @@ npm run typecheck   # TypeScript type checking only
 ## Architecture
 
 ### Three-Stage Active Learning Workflow
-1. **Prototype** (bootstrap) — Kennard-Stone diversity sampling selects initial representative code blocks
+1. **Prototype** (bootstrap) — TypiClust (KMeans + KNN typicality) selects initial representative code blocks
 2. **Uncertainty** (learn) — User labels blocks as Human/LLM; SVM trains on selections, committee (RF+MLP) votes on uncertainty
 3. **Disagreement** (apply) — Thresholds auto-classify remaining blocks
 
@@ -46,7 +46,7 @@ npm run typecheck   # TypeScript type checking only
   - `svm_utils.py` — SVM with RBF kernel, LRU-cached models (keyed by selection hash), decision function scores
   - `committee_service.py` — Query by Committee: Random Forest + MLP ensemble, vote entropy for uncertainty; extracts feature importances from RF
   - `pytorch_mlp.py` — sklearn-compatible MLP with sample weight support, early stopping
-  - `cold_start_service.py` — Kennard-Stone max-min-distance diversity sampling
+  - `cold_start_service.py` — TypiClust: KMeans clustering + KNN typicality scoring for diversity sampling
   - `data_service.py` — Loads/serves Parquet files via Polars LazyFrames; runs feature filtering on init, stores both `all_metric_columns` (original) and `metric_columns` (filtered)
   - `feature_filter.py` — Unsupervised feature filtering: flags low-variance and highly-correlated columns as recommendations (does not remove them); thresholds configurable
   - `constants.py` — `CLICK_WEIGHT=1.0`, `THRESHOLD_WEIGHT=0.2`, `VARIANCE_THRESHOLD=1e-4`, `CORRELATION_THRESHOLD=0.95`
@@ -69,7 +69,7 @@ Selections have a `source` field: `'click'` (manual, weight 1.0), `'threshold'` 
 - `GET /api/blocks` — Block metadata, metric column names, `all_metric_columns`, `filter_summary` (variance/correlation stats)
 - `GET /api/blocks/{id}/code` — Code content for a block
 - `POST /api/similarity-score-histogram` — Train SVM, return scores/histogram/committee votes/feature importances; accepts optional `selectedFeatures` list
-- `POST /api/cold-start/representative` — Kennard-Stone diverse sample suggestions
+- `POST /api/cold-start/representative` — TypiClust diverse sample suggestions
 - `GET /health` — Health check
 
 ### Data (`data/output/`)

@@ -36,6 +36,7 @@ async def get_blocks():
             "original_count": fr.original_count,
             "surviving_count": fr.surviving_count,
             "variances": fr.variances,
+            "means": fr.means,
             "correlations": [
                 {"col_a": c.col_a, "col_b": c.col_b, "r": c.r}
                 for c in fr.correlations

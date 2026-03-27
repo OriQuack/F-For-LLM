@@ -52,6 +52,72 @@ export const NEUTRAL_ICON_COLORS = {
 // STRIPE PATTERN - Unified settings for all stripe patterns
 // Used across: SelectionBar, DecisionMarginHistogram
 // ============================================================================
+// ============================================================================
+// METRIC DISPLAY NAMES — human-readable labels for metric column names
+// ============================================================================
+export const METRIC_LABELS: Record<string, string> = {
+  // Lexical
+  avg_identifier_len: 'Avg Identifier Length',
+  std_identifier_len: 'Identifier Length Std',
+  single_char_identifier_ratio: 'Single-Char Identifiers',
+  camel_case_ratio: 'camelCase Ratio',
+  snake_case_ratio: 'snake_case Ratio',
+  digit_in_identifier_ratio: 'Digits in Identifiers',
+  repeated_identifier_ratio: 'Identifier Reuse',
+  identifier_entropy: 'Identifier Entropy',
+  unique_token_ratio: 'Unique Token Ratio',
+  type_token_ratio: 'Type-Token Ratio',
+  yules_k: "Yule's K",
+  zipf_alpha_proxy: 'Zipf \u03b1 Proxy',
+  identifier_ratio: 'Identifier Ratio',
+  literal_ratio: 'Literal Ratio',
+  keyword_ratio: 'Keyword Ratio',
+  whitespace_ratio: 'Whitespace Ratio',
+  // Comments
+  comment_line_ratio: 'Comment Lines',
+  inline_comment_ratio: 'Inline Comments',
+  block_comment_ratio: 'Block Comments',
+  docstring_ratio: 'Docstrings',
+  avg_comment_len: 'Avg Comment Length',
+  informal_tag_ratio: 'TODO/FIXME Tags',
+  // Formatting
+  avg_line_length: 'Avg Line Length',
+  std_line_length: 'Line Length Std',
+  blank_line_ratio: 'Blank Lines',
+  blank_run_entropy: 'Blank Run Entropy',
+  indentation_depth_mean: 'Avg Indentation',
+  indentation_depth_std: 'Indentation Std',
+  tab_ratio: 'Tab Usage',
+  trailing_whitespace_ratio: 'Trailing Whitespace',
+  // Complexity
+  loc: 'Lines of Code',
+  non_empty_loc: 'Non-Empty Lines',
+  token_count: 'Token Count',
+  function_count: 'Function Count',
+  avg_function_len: 'Avg Function Length',
+  cyclomatic_complexity: 'Cyclomatic Complexity',
+  max_nesting_depth: 'Max Nesting Depth',
+  loop_count: 'Loops',
+  branch_count: 'Branches',
+  exception_count: 'Exceptions',
+  return_count: 'Returns',
+  // LM Probability
+  lm_all_avg_logprob: 'LM Avg Log-Prob',
+  lm_all_avg_rank: 'LM Avg Rank',
+  lm_names_avg_logprob: 'LM Names Log-Prob',
+  lm_special_avg_logprob: 'LM Special Log-Prob',
+  lm_comments_avg_logprob: 'LM Comments Log-Prob',
+  lm_others_avg_logprob: 'LM Other Log-Prob',
+  lm_names_scaled_sum: 'LM Names Scaled',
+  lm_special_scaled_sum: 'LM Special Scaled',
+  lm_comments_scaled_sum: 'LM Comments Scaled',
+  lm_others_scaled_sum: 'LM Other Scaled',
+} as const
+
+export function getMetricLabel(name: string): string {
+  return METRIC_LABELS[name] ?? name
+}
+
 export const STRIPE_PATTERN = {
   width: 12,
   height: 12,

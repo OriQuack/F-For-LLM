@@ -2,7 +2,7 @@
 Query by Committee (QBC) Service — binary classification only.
 
 Trains RF + MLP alongside SVM to detect disagreement cases.
-Simplified from interface version (removed multi-class methods).
+Uses balanced sample weights and 5-tier adaptive MLP configuration.
 """
 
 import numpy as np
@@ -13,6 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
 from .pytorch_mlp import WeightedMLPClassifier
+from .svm_utils import compute_balanced_sample_weights
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,20 @@ class CommitteeService:
         y_train: np.ndarray,
         sample_weights: Optional[np.ndarray] = None,
         feature_names: Optional[List[str]] = None,
+        skip_scaling: bool = False,
     ) -> Tuple[Optional[RandomForestClassifier], Optional[WeightedMLPClassifier], Optional[StandardScaler], Optional[Dict[str, float]]]:
-        """Train RF and MLP models for committee. Returns (rf, mlp, scaler, feature_importances)."""
+        """Train RF and MLP models for committee.
+
+        Args:
+            X_train: Training feature matrix (N_samples, N_features)
+            y_train: Training labels (N_samples,) with values 0 or 1
+            sample_weights: Optional sample weights (N_samples,)
+            feature_names: Optional feature names for RF importance extraction
+            skip_scaling: If True, skip StandardScaler (data already scaled)
+
+        Returns:
+            Tuple of (rf, mlp, scaler, feature_importances)
+        """
         n_positive = np.sum(y_train == 1)
         n_negative = np.sum(y_train == 0)
 
@@ -52,8 +65,14 @@ class CommitteeService:
             return None, None, None, None
 
         n_samples = len(y_train)
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X_train)
+
+        # Scale features (important for MLP) — skip if already scaled
+        if skip_scaling:
+            scaler = None
+            X_scaled = X_train
+        else:
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X_train)
 
         rf_model = self._train_rf(X_scaled, y_train, sample_weights, n_samples)
         mlp_model = self._train_mlp(X_scaled, y_train, sample_weights, n_samples)
@@ -70,26 +89,87 @@ class CommitteeService:
 
     def _train_rf(self, X, y, weights, n):
         try:
-            n_est = max(10, min(100, n // 2))
+            n_est = max(50, min(300, n * 2))
             depth = min(5, max(2, int(np.log2(n + 1))))
+
+            # Balance by weighted class mass (not raw counts like sklearn's class_weight='balanced')
+            balanced_weights = weights
+            if weights is not None:
+                balanced_weights = compute_balanced_sample_weights(y, weights)
+
             rf = RandomForestClassifier(
                 n_estimators=n_est, max_depth=depth,
-                class_weight="balanced", random_state=42, n_jobs=-1,
+                random_state=42, n_jobs=-1,
             )
-            rf.fit(X, y, sample_weight=weights)
+            rf.fit(X, y, sample_weight=balanced_weights)
+
+            logger.info(f"RF trained: n_estimators={n_est}, max_depth={depth}")
             return rf
         except Exception as e:
             logger.error(f"RF training failed: {e}")
             return None
 
+    @staticmethod
+    def _select_mlp_config(n_samples: int) -> dict:
+        """Select MLP architecture based on sample count.
+
+        5-tier system:
+          Tier 1 (N<30):     (6,)      WD=1e-2  DO=0.0  ES=off  max_iter=300
+          Tier 2 (30-100):   (12,)     WD=5e-3  DO=0.0  ES=on if N>=50
+          Tier 3 (100-400):  (16, 8)   WD=5e-4  DO=0.0  ES=on
+          Tier 4 (400-1500): (32, 16)  WD=1e-4  DO=0.2  ES=on
+          Tier 5 (1500+):    (64, 32)  WD=1e-4  DO=0.2  ES=on
+        """
+        if n_samples < 30:
+            return dict(
+                tier=1, hidden_layer_sizes=(6,), alpha=1e-2,
+                dropout=0.0, early_stopping=False, max_iter=300,
+            )
+        elif n_samples < 100:
+            return dict(
+                tier=2, hidden_layer_sizes=(12,), alpha=5e-3,
+                dropout=0.0, early_stopping=(n_samples >= 50), max_iter=500,
+            )
+        elif n_samples < 400:
+            return dict(
+                tier=3, hidden_layer_sizes=(16, 8), alpha=5e-4,
+                dropout=0.0, early_stopping=True, max_iter=500,
+            )
+        elif n_samples < 1500:
+            return dict(
+                tier=4, hidden_layer_sizes=(32, 16), alpha=1e-4,
+                dropout=0.2, early_stopping=True, max_iter=500,
+            )
+        else:
+            return dict(
+                tier=5, hidden_layer_sizes=(64, 32), alpha=1e-4,
+                dropout=0.2, early_stopping=True, max_iter=500,
+            )
+
     def _train_mlp(self, X, y, weights, n):
         try:
-            hidden = (16,) if n < 20 else (32, 16)
+            cfg = self._select_mlp_config(n)
+            tier = cfg.pop("tier")
+
+            # Balance by weighted class mass (consistent with SVM and RF)
+            balanced_weights = weights
+            if weights is not None:
+                balanced_weights = compute_balanced_sample_weights(y, weights)
+
             mlp = WeightedMLPClassifier(
-                hidden_layer_sizes=hidden, alpha=0.01,
-                max_iter=500, early_stopping=True, random_state=42,
+                **cfg,
+                validation_fraction=0.2,
+                n_iter_no_change=10,
+                random_state=42,
             )
-            mlp.fit(X, y, sample_weight=weights)
+            mlp.fit(X, y, sample_weight=balanced_weights)
+
+            logger.info(
+                f"MLP Tier {tier}: layers={cfg['hidden_layer_sizes']}, "
+                f"WD={cfg['alpha']}, DO={cfg['dropout']}, "
+                f"ES={'on' if cfg['early_stopping'] else 'off'}, "
+                f"iters={mlp.n_iter_}/{cfg['max_iter']}"
+            )
             return mlp
         except Exception as e:
             logger.error(f"MLP training failed: {e}")

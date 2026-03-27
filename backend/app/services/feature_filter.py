@@ -23,6 +23,7 @@ class FilterResult:
     original_count: int
     surviving_count: int
     variances: Dict[str, float] = field(default_factory=dict)
+    means: Dict[str, float] = field(default_factory=dict)
     correlations: List[CorrelationPair] = field(default_factory=list)
 
 
@@ -48,9 +49,11 @@ def filter_features(
     """
     original_count = len(column_names)
 
-    # Compute per-column variance
+    # Compute per-column variance and mean
     variances_arr = np.var(matrix, axis=0)
+    means_arr = np.mean(matrix, axis=0)
     variances = {name: float(v) for name, v in zip(column_names, variances_arr)}
+    means = {name: float(m) for name, m in zip(column_names, means_arr)}
 
     # Flag low-variance columns (recommendations only)
     removed_low_variance = [
@@ -88,5 +91,6 @@ def filter_features(
         original_count=original_count,
         surviving_count=original_count,
         variances=variances,
+        means=means,
         correlations=correlations,
     )

@@ -6,7 +6,7 @@ from typing import List
 
 class ColdStartRequest(BaseModel):
     block_ids: List[int]
-    num_suggestions: int = 10
+    num_suggestions: int = 30
 
 
 class ColdStartResponse(BaseModel):

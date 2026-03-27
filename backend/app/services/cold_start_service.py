@@ -1,14 +1,17 @@
 """
-Cold-start service using Kennard-Stone algorithm.
+Cold-start service using TypiClust algorithm.
 
-Simplified from interface version — blocks only, no pairs.
+Selects representative samples via KMeans clustering + KNN typicality
+scoring to bootstrap active learning when no labels exist yet.
 """
 
 import numpy as np
 import logging
 import random
-from typing import List, Optional
+from typing import List
 from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.neighbors import NearestNeighbors
 
 from .data_service import DataService
 
@@ -16,15 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 class ColdStartService:
-    """Diversity-based representative sampling for bootstrap."""
+    """TypiClust-based representative sampling for bootstrap."""
 
     def __init__(self, data_service: DataService):
         self.data_service = data_service
 
     async def get_suggestions(
-        self, block_ids: List[int], num_suggestions: int = 10
+        self, block_ids: List[int], num_suggestions: int = 30
     ) -> List[int]:
-        """Select diverse block IDs using Kennard-Stone."""
+        """Select diverse block IDs using TypiClust."""
         metrics_df = self.data_service.get_metrics(block_ids)
         metric_cols = self.data_service.metric_columns
 
@@ -40,26 +43,82 @@ class ColdStartService:
         scaled = scaler.fit_transform(matrix)
 
         n_select = min(num_suggestions, len(id_list))
-        indices = self._kennard_stone(scaled, n_select)
+        indices = self._typiclust(scaled, n_select, k_nn=10)
 
         selected = [id_list[i] for i in indices]
-        logger.info(f"Kennard-Stone selected {len(selected)} diverse blocks")
+        logger.info(f"TypiClust selected {len(selected)} diverse blocks")
         return selected
 
-    def _kennard_stone(self, X: np.ndarray, n: int) -> List[int]:
-        """Kennard-Stone: iteratively select max-min-distance points."""
+    def _typiclust(self, X: np.ndarray, n: int, k_nn: int = 7) -> List[int]:
+        """
+        TypiClust: KMeans clustering + KNN typicality scoring.
+
+        Selects the most "typical" (densely surrounded) sample from each
+        cluster. Clusters smaller than 5 fall back to nearest-to-centroid.
+
+        Args:
+            X: Data matrix (n_samples, n_features), should be pre-scaled
+            n: Number of samples to select (= number of clusters)
+            k_nn: Max nearest neighbors for typicality (adapted per cluster:
+                  min(k_nn, cluster_size - 1))
+
+        Returns:
+            List of selected sample indices
+        """
         n_samples = X.shape[0]
         if n >= n_samples:
             return list(range(n_samples))
 
-        dist = np.linalg.norm(X[:, np.newaxis] - X, axis=2)
-        i, j = np.unravel_index(np.argmax(dist), dist.shape)
-        selected = [int(i), int(j)]
+        km = KMeans(n_clusters=n, init='k-means++', n_init=10, random_state=42)
+        labels = km.fit_predict(X)
 
-        while len(selected) < n:
-            min_dists = dist[selected].min(axis=0)
-            min_dists[selected] = -1
-            selected.append(int(np.argmax(min_dists)))
+        selected: List[int] = []
+        for c in range(n):
+            cluster_mask = np.where(labels == c)[0]
+            if len(cluster_mask) == 0:
+                continue
+
+            cluster_size = len(cluster_mask)
+            typicality = np.empty(0)
+
+            if cluster_size < 5:
+                # Small cluster fallback: nearest to centroid
+                dists = np.linalg.norm(X[cluster_mask] - km.cluster_centers_[c], axis=1)
+                best_local = int(np.argmin(dists))
+                idx = int(cluster_mask[best_local])
+                use_typicality = False
+            else:
+                # Adaptive k: min(k_nn, cluster_size - 1)
+                k = min(k_nn, cluster_size - 1)
+                cluster_points = X[cluster_mask]
+                nn = NearestNeighbors(n_neighbors=k + 1, metric='euclidean')
+                nn.fit(cluster_points)
+                distances, _ = nn.kneighbors(cluster_points)
+                mean_dists = distances[:, 1:].mean(axis=1)  # exclude self
+                typicality = 1.0 / (mean_dists + 1e-10)
+                best_local = int(np.argmax(typicality))
+                idx = int(cluster_mask[best_local])
+                use_typicality = True
+
+            # Avoid duplicates
+            if idx in selected:
+                if use_typicality:
+                    order = np.argsort(-typicality)
+                    for alt in order:
+                        alt_idx = int(cluster_mask[alt])
+                        if alt_idx not in selected:
+                            idx = alt_idx
+                            break
+                else:
+                    dists = np.linalg.norm(X[cluster_mask] - km.cluster_centers_[c], axis=1)
+                    order = np.argsort(dists)
+                    for alt in order:
+                        alt_idx = int(cluster_mask[alt])
+                        if alt_idx not in selected:
+                            idx = alt_idx
+                            break
+
+            selected.append(idx)
 
         return selected
 

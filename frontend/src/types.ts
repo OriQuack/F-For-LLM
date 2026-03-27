@@ -93,6 +93,7 @@ export interface FilterSummary {
   original_count: number
   surviving_count: number
   variances: Record<string, number>
+  means: Record<string, number>
   correlations: CorrelationPair[]
 }
 

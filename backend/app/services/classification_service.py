@@ -120,7 +120,14 @@ class ClassificationService:
         if cache_key in self._svm_cache:
             model, scaler = self._svm_cache[cache_key]
         else:
-            model, scaler = train_svm_model(sel_vectors, rej_vectors, sel_weights, rej_weights)
+            # Fit scaler on full prediction pool for stable statistics
+            full_pool_scaler = StandardScaler()
+            full_pool_scaler.fit(metrics_matrix)
+
+            model, scaler = train_svm_model(
+                sel_vectors, rej_vectors, sel_weights, rej_weights,
+                scaler=full_pool_scaler,
+            )
             if len(self._svm_cache) >= self._max_cache_size:
                 self._svm_cache.pop(next(iter(self._svm_cache)))
             self._svm_cache[cache_key] = (model, scaler)
@@ -129,28 +136,26 @@ class ClassificationService:
         scores = score_with_svm(model, scaler, metrics_matrix)
         scores_dict = {str(int(bid)): float(s) for bid, s in zip(block_ids_arr, scores)}
 
-        # Train committee
+        # Train committee — pre-scale with SVM scaler, skip committee's own scaling
         X_train = np.vstack([sel_vectors, rej_vectors])
         y_train = np.array([1] * len(sel_vectors) + [0] * len(rej_vectors))
         sample_weights = np.concatenate([sel_weights, rej_weights])
 
-        rf, mlp, committee_scaler, feature_importances = self.committee_service.train_committee(
-            X_train, y_train, sample_weights,
+        X_train_scaled = scaler.transform(X_train)
+        rf, mlp, _committee_scaler, feature_importances = self.committee_service.train_committee(
+            X_train_scaled, y_train, sample_weights,
             feature_names=feature_cols,
+            skip_scaling=True,
         )
 
         committee_votes_response = None
         if rf is not None or mlp is not None:
-            ### wrong double scaling ..?
-            ##X_scaled = scaler.transform(metrics_matrix)
-            ##preds = self.committee_service.predict_with_committee(
-            ##    X_scaled, scores, rf, mlp, committee_scaler
-            ##)
-            ###
+            # Scale all features using SVM scaler (consistent, no double scaling)
+            X_scaled = scaler.transform(metrics_matrix)
             preds = self.committee_service.predict_with_committee(
-                metrics_matrix, scores, rf, mlp, committee_scaler
+                X_scaled, scores, rf, mlp, None  # scaler=None since already scaled
             )
-            
+
             item_ids = [str(int(bid)) for bid in block_ids_arr]
             votes_dict = self.committee_service.get_vote_info_dict(item_ids, preds)
             committee_votes_response = {

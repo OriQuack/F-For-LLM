@@ -8,7 +8,7 @@
 }
 
 .metric-picker-panel h3 {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -16,25 +16,9 @@
 }
 
 .metric-picker-placeholder {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   margin: 0;
-}
-
-/* ---- Inline Stats (var / correlation) ---- */
-
-.feature-block__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  padding-left: 18px; /* align under label text, past checkbox */
-}
-
-.feature-stat {
-  font-size: 9px;
-  font-family: monospace;
-  color: var(--color-text-secondary);
-  opacity: 0.7;
 }
 
 /* ---- Feature Checkbox List ---- */
@@ -42,55 +26,62 @@
 .feature-checkbox-list {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 1px;
 }
 
-.feature-list__legend {
+/* ---- Column Header ---- */
+
+.feature-row--header {
+  border-bottom: 1px solid var(--color-border, #333);
+  padding-bottom: 3px;
+  margin-bottom: 2px;
+  opacity: 0.7;
+}
+
+.feature-row--header .feature-row__label {
+  font-size: 11px;
+  color: var(--color-text-primary, #ddd);
+  letter-spacing: 0.5px;
+}
+
+.feature-glyph-header {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--color-text-primary, #ddd);
+  letter-spacing: 0.5px;
+}
+
+/* ---- Feature Row (single horizontal line) ---- */
+
+.feature-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
-  color: var(--color-text-secondary);
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--color-border, #333);
-  margin-bottom: 4px;
-}
-
-.feature-list__legend .feature-importance-bar-bg {
-  width: 40px;
-}
-
-/* ---- Feature Block ---- */
-
-.feature-block {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: 3px;
+  transition: background 0.1s;
 }
 
-.feature-block:not(.feature-block--enabled) {
-  opacity: 0.5;
+.feature-row:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.feature-block--detailed {
-  background: rgba(255, 255, 255, 0.04);
-  padding: 4px 6px;
+.feature-row:not(.feature-row--enabled) {
+  opacity: 0.75;
 }
 
-.feature-block.feature-block--highlighted {
+.feature-row.feature-row--highlighted {
   background: rgba(91, 155, 213, 0.15);
-  outline: 3px solid rgba(91, 155, 213, 0.6);
+  outline: 2px solid rgba(91, 155, 213, 0.5);
   outline-offset: -1px;
   opacity: 1;
 }
 
-.feature-block__label {
+.feature-row__label {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   font-family: monospace;
   cursor: pointer;
@@ -100,7 +91,7 @@
   min-width: 0;
 }
 
-.feature-block__label input[type="checkbox"] {
+.feature-row__label input[type="checkbox"] {
   margin: 0;
   cursor: pointer;
   flex-shrink: 0;
@@ -110,50 +101,73 @@
   text-decoration: line-through;
 }
 
-/* ---- Feature Block Details (bar + rank) ---- */
-
-.feature-block__details {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding-left: 18px; /* align under label text, past checkbox */
+.feature-row__auto-reason {
+  font-size: 12px;
+  color: #ef5350;
+  opacity: 1;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
-.feature-block__bar-row {
+/* ---- Inline Glyphs ---- */
+
+.feature-row__glyphs {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
-.feature-importance-bar-bg {
-  flex: 1;
-  height: 8px;
+/* CV glyph — subtle monospace badge */
+.feature-glyph-var {
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  padding: 0 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.feature-glyph-var--low {
+  opacity: 0.4;
+  color: #ef6c00;
+}
+
+/* Importance glyph — tiny inline bar + percentage */
+.feature-glyph-imp {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.feature-glyph-imp__bar {
+  width: 36px;
+  height: 6px;
   background: var(--color-border, #333);
   border-radius: 2px;
   overflow: hidden;
 }
 
-.feature-importance-bar-fill {
+.feature-glyph-imp__fill {
+  display: block;
   height: 100%;
   background: var(--color-accent, #5b9bd5);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
 
-.feature-importance-value {
-  font-size: 10px;
-  color: var(--color-text-secondary);
-  width: 36px;
-  flex-shrink: 0;
-  text-align: right;
+.feature-glyph-imp__pct {
+  font-size: 12px;
   font-family: monospace;
+  color: var(--color-text-secondary);
+  width: 30px;
+  text-align: right;
 }
 
-.feature-block__rank {
-  font-size: 10px;
-  color: var(--color-text-secondary);
-  font-family: monospace;
-}
+/* ---- Rank colors ---- */
 
 .rank-up {
   color: #4caf50;
@@ -163,10 +177,13 @@
   color: #ef6c00;
 }
 
+/* ---- Footer ---- */
+
 .feature-importance-footer {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   opacity: 0.7;
   margin-top: 2px;
   text-align: right;
 }
+

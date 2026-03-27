@@ -2,6 +2,7 @@ import type {
   CodeBlock,
   WeightedBlockId,
   SimilarityScoreHistogramResponse,
+  FilterSummary,
 } from './types'
 
 const BASE = '/api'
@@ -27,12 +28,7 @@ interface BlockListResponse {
   metric_columns: string[]
   total_blocks: number
   all_metric_columns: string[]
-  filter_summary: {
-    removed_low_variance: string[]
-    removed_correlated: { removed: string; kept_instead: string }[]
-    original_count: number
-    surviving_count: number
-  } | null
+  filter_summary: FilterSummary | null
 }
 
 export async function fetchBlocks(): Promise<BlockListResponse> {
@@ -77,7 +73,7 @@ interface ColdStartResponse {
 
 export async function fetchColdStartSuggestions(
   blockIds: number[],
-  n: number = 10,
+  n: number = 30,
 ): Promise<number[]> {
   const res = await post<ColdStartResponse>(`${BASE}/cold-start/representative`, {
     block_ids: blockIds,

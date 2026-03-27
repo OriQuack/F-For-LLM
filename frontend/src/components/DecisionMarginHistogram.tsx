@@ -11,6 +11,7 @@ import {
 import type { CategoryCounts } from '../lib/histogram-utils'
 import { COLORS, STRIPE_PATTERN } from '../lib/constants'
 import ThresholdHandles from './ThresholdHandles'
+import Tooltip from './Tooltip'
 import '../styles/DecisionMarginHistogram.css'
 
 // ============================================================================
@@ -457,32 +458,16 @@ const DecisionMarginHistogram: React.FC = () => {
                 const totalCount = counts.confirmed + counts.autoSelected + counts.rejected + counts.autoRejected + counts.unsure
 
                 return (
-                  <div
-                    className="tag-panel__tooltip"
-                    style={{
-                      position: 'fixed',
-                      left: tooltipPosition.x + 12,
-                      top: tooltipPosition.y - 12,
-                      pointerEvents: 'none',
-                      zIndex: 1000
-                    }}
-                  >
-                    <div className="tag-panel__tooltip-header">
-                      {bin.x0.toFixed(2)} – {bin.x1.toFixed(2)}
-                    </div>
-                    <div className="tag-panel__tooltip-summary">
-                      Total: {formatCount(totalCount)} blocks
-                    </div>
+                  <Tooltip x={tooltipPosition.x} y={tooltipPosition.y}>
+                    <Tooltip.Header>{bin.x0.toFixed(2)} – {bin.x1.toFixed(2)}</Tooltip.Header>
+                    <Tooltip.Summary>Total: {formatCount(totalCount)} blocks</Tooltip.Summary>
                     {items.map((item, idx) => (
-                      <div key={idx} className="tag-panel__tooltip-row">
-                        <span
-                          className="tag-panel__tooltip-swatch"
-                          style={{ backgroundColor: item.color }}
-                        />
+                      <Tooltip.Row key={idx}>
+                        <Tooltip.Swatch color={item.color} />
                         {item.label}: {formatCount(item.count)}
-                      </div>
+                      </Tooltip.Row>
                     ))}
-                  </div>
+                  </Tooltip>
                 )
               })()}
             </>

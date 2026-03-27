@@ -34,38 +34,3 @@
   text-align: center;
 }
 
-/* Tooltip */
-.convergence-indicator__tooltip {
-  background: #1f2937;
-  color: #f9fafb;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.convergence-indicator__tooltip-header {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.convergence-indicator__tooltip-summary {
-  color: #d1d5db;
-  margin-bottom: 2px;
-}
-
-.convergence-indicator__tooltip-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.convergence-indicator__tooltip-swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}

@@ -19,6 +19,45 @@ import {
 } from '../api'
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+const MAX_ENABLED = 20
+
+function computeDefaultEnabled(
+  allColumns: string[],
+  filterSummary: FilterSummary | null,
+): Set<string> {
+  if (!filterSummary) return new Set(allColumns)
+
+  const toDisable = new Set<string>()
+  for (const col of filterSummary.removed_low_variance) {
+    toDisable.add(col)
+  }
+  for (const { removed } of filterSummary.removed_correlated) {
+    toDisable.add(removed)
+  }
+
+  let surviving = allColumns.filter(col => !toDisable.has(col))
+
+  // If still more than MAX_ENABLED, keep top by coefficient of variation
+  if (surviving.length > MAX_ENABLED) {
+    const cv = (col: string) => {
+      const v = filterSummary.variances[col] ?? 0
+      const m = Math.abs(filterSummary.means[col] ?? 0)
+      return m > 1e-10 ? Math.sqrt(v) / m : Math.sqrt(v)
+    }
+    surviving = surviving
+      .slice()
+      .sort((a, b) => cv(b) - cv(a))
+      .slice(0, MAX_ENABLED)
+  }
+
+  const enabled = new Set(surviving)
+  return enabled.size > 0 ? enabled : new Set(allColumns)
+}
+
+// ============================================================================
 // STORE INTERFACE
 // ============================================================================
 
@@ -141,13 +180,16 @@ export const useStore = create<AppState>((set, get) => ({
       const resp = await fetchBlocks()
       const { blocks, metric_columns } = resp
       const blockIds = blocks.map((b) => b.block_id)
-      const diversityIdsArr = await fetchColdStartSuggestions(blockIds, 10)
+      const diversityIdsArr = await fetchColdStartSuggestions(blockIds, 30)
 
       set({
         blocks,
         metricColumns: metric_columns,
         allMetricColumns: resp.all_metric_columns ?? metric_columns,
-        enabledFeatures: new Set(metric_columns),
+        enabledFeatures: computeDefaultEnabled(
+          resp.all_metric_columns ?? metric_columns,
+          resp.filter_summary ?? null,
+        ),
         filterSummary: resp.filter_summary ?? null,
         diversityIds: new Set(diversityIdsArr),
         initialized: true,

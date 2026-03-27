@@ -15,39 +15,3 @@
 .correlation-matrix__svg {
   display: block;
 }
-
-.correlation-matrix__axis-label {
-  font-size: 8px;
-  font-family: monospace;
-  fill: var(--color-text-secondary);
-  opacity: 0.7;
-  transition: opacity 0.15s, fill 0.15s;
-}
-
-.correlation-matrix__axis-label--highlighted {
-  opacity: 1;
-  font-weight: bold;
-}
-
-/* Tooltip */
-.correlation-matrix__tooltip {
-  background: var(--color-bg-tooltip, #1e1e2e);
-  border: 1px solid var(--color-border, #333);
-  border-radius: 4px;
-  padding: 6px 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-.correlation-matrix__tooltip-header {
-  font-size: 12px;
-  font-family: monospace;
-  font-weight: bold;
-  color: #fff;
-  margin-bottom: 2px;
-}
-
-.correlation-matrix__tooltip-pair {
-  font-size: 10px;
-  font-family: monospace;
-  color: var(--color-text-secondary);
-}
