@@ -194,7 +194,12 @@ export default function ConvergenceIndicator() {
 
   return (
     <div ref={containerRef} className="convergence-indicator">
-      <div className="subheader" style={{ marginBottom: 4 }}>Stability Chart</div>
+      <div
+        className="subheader"
+        style={{ marginBottom: 4 }}
+        data-tooltip-title="Stability Chart"
+        data-tooltip="How much predictions change each iteration. Low = stable."
+      >Stability Chart</div>
       {sparklineData && hasMeasured && (
         <svg
           className="convergence-indicator__sparkline"

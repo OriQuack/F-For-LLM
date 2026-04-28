@@ -114,12 +114,16 @@ export default function MetricPickerPanel() {
 
   return (
     <div className="metric-picker-panel">
-      <h3 className="subheader">Metric Picker</h3>
+      <h3
+        className="subheader"
+        data-tooltip-title="Metric Picker"
+        data-tooltip="Choose which metrics the model uses."
+      >Metric Picker</h3>
 
       {allMetricColumns.length > 0 ? (
         <div className="feature-checkbox-list">
           <div className="feature-row feature-row--header">
-            <span className="feature-row__label">Feature</span>
+            <span className="feature-row__label">Metric</span>
             <span className="feature-row__glyphs">
               {showStats && <span className="feature-glyph-header">Coeff. of Variation</span>}
               {showImportance && <span className="feature-glyph-header">Importance</span>}
@@ -208,7 +212,11 @@ export default function MetricPickerPanel() {
             onHoverMetrics={handleHoverMetrics}
             onClickMetrics={handleClickMetrics}
           />
-          <div className="correlation-legend">
+          <div
+            className="correlation-legend"
+            data-tooltip-title="Correlation legend"
+            data-tooltip="Color shows correlation strength. Gray = unpicked metric."
+          >
             <div className="correlation-legend__row">
               <span className="correlation-legend__title">Picked (|r|)</span>
               <span className="correlation-legend__tick">0</span>

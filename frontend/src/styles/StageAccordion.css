@@ -227,12 +227,10 @@
   transform: rotate(45deg);
 }
 
-.stage-selector__legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #CC79A7;
-  flex-shrink: 0;
+.stage-selector__legend-text {
+  border: 2px dashed #CC79A7;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
 /* ============================================================================

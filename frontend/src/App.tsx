@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useStore } from './store'
 import ClassifierView from './components/ClassifierView'
+import { DataTooltipLayer } from './components/Tooltip'
 import './styles/App.css'
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
         <h1><span style={{ color: '#e53935', fontFamily: "'Caveat', cursive" }}>F</span>&nbsp;&nbsp; for LLM</h1>
       </header>
       <ClassifierView />
+      <DataTooltipLayer />
     </div>
   )
 }

@@ -18,9 +18,12 @@
 }
 
 .item-list-row.current {
-  background: rgba(33, 150, 243, 0.15);
-  border-left: 3px solid #2196F3;
-  padding-left: 7px;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.item-list-row--disagreement {
+  outline: 2px dashed #CC79A7;
+  outline-offset: -5px;
 }
 
 .item-name {

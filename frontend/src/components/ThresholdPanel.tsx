@@ -29,6 +29,8 @@ export default function ThresholdPanel() {
               className={`apply-btn ${isConverging && activeStage === 'apply' ? 'pulsing' : ''}`}
               onClick={applyThresholdTags}
               disabled={activeStage !== 'apply'}
+              data-tooltip-title="Apply Threshold"
+              data-tooltip="Auto-tag blocks past the thresholds and retrain."
             >
               Apply Threshold
             </button>

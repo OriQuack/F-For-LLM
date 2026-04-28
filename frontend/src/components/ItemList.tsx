@@ -1,7 +1,7 @@
 import { useRef, useCallback, useMemo, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useStore } from '../store'
-import { TagIndicator, DisagreementIndicator } from './Indicators'
+import { TagIndicator } from './Indicators'
 import type { CodeBlock, SelectionState } from '../types'
 import '../styles/ItemList.css'
 
@@ -59,14 +59,18 @@ export default function ItemList() {
           const state = selectionStates.get(block.block_id)
           const score = similarityScores.get(block.block_id)
 
+          const voteInfo = committeeVotes.get(block.block_id)
+          const hasDisagreement = activeStage === 'apply' && voteInfo !== undefined && voteInfo.vote_entropy > 0
+
           let rowClass = 'item-list-row'
           if (isCurrent) rowClass += ' current'
+          if (hasDisagreement) rowClass += ' item-list-row--disagreement'
 
-          // Determine effective tag: committed state or live threshold preview
+          // Determine effective tag: committed state, or live threshold preview (apply stage only)
           let effectiveState: SelectionState | undefined = state
           let isProjected = false
-          if (!state && score !== undefined) {
-            // Only project from score + thresholds for items without committed tags
+          if (!state && score !== undefined && activeStage === 'apply') {
+            // Threshold zones are only visible/meaningful at phase 3
             if (score >= selectThreshold) {
               effectiveState = 'selected'
               isProjected = true
@@ -91,9 +95,6 @@ export default function ItemList() {
               onClick={() => handleClick(block)}
             >
               <span className="item-name">{block.block_name}</span>
-              {activeStage === 'apply' && (
-                <DisagreementIndicator voteInfo={committeeVotes.get(block.block_id)} />
-              )}
               <TagIndicator state={effectiveState} isAuto={isProjected} />
               {score !== undefined && activeStage !== 'bootstrap' && (
                 <span className="item-score">{score.toFixed(2)}</span>

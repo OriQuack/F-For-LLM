@@ -439,14 +439,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     if (s.hideTagged) {
-      list = list.filter((b) => {
-        if (s.blockSelectionStates.has(b.block_id)) return false
-        if (s.activeStage !== 'apply') {
-          const score = s.similarityScores.get(b.block_id)
-          if (score !== undefined && (score >= s.selectThreshold || score <= s.rejectThreshold)) return false
-        }
-        return true
-      })
+      list = list.filter((b) => !s.blockSelectionStates.has(b.block_id))
     }
 
     return list

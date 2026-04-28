@@ -236,7 +236,12 @@ const DecisionMarginHistogram: React.FC = () => {
 
   return (
     <div className="tag-automatic-panel">
-      <div className="subheader" style={{ marginBottom: 4 }}>Confidence Histogram</div>
+      <div
+        className="subheader"
+        style={{ marginBottom: 4 }}
+        data-tooltip-title="Confidence Histogram"
+        data-tooltip="Model confidence per block. Drag the handles in Stage 3 to set auto-tag cutoffs."
+      >Confidence Histogram</div>
       <div className="tag-panel__content">
         <div ref={containerRef} className="tag-panel__histogram-container">
           {histogramChart && hasMeasured ? (
