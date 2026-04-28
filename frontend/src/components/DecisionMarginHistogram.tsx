@@ -54,6 +54,8 @@ const DecisionMarginHistogram: React.FC = () => {
   const blockSelectionSources = useStore((s) => s.blockSelectionSources)
   const similarityScores = useStore((s) => s.similarityScores)
   const blocks = useStore((s) => s.blocks)
+  const activeStage = useStore((s) => s.activeStage)
+  const showThresholds = activeStage === 'apply'
   const { ref: containerRef, size: containerSize, hasMeasured } = useResizeObserver<HTMLDivElement>()
 
   const [thresholds, setThresholds] = useState({
@@ -270,28 +272,32 @@ const DecisionMarginHistogram: React.FC = () => {
                 </defs>
 
                 <g transform={`translate(${histogramChart.margin.left}, ${histogramChart.margin.top})`}>
-                  {/* 3 colored zone backgrounds */}
-                  {/* Zone 1: Left edge → reject threshold (LLM auto stripe) */}
-                  <rect
-                    x={0} y={0}
-                    width={Math.max(0, safeThresholdPositions.rejectX)}
-                    height={histogramChart.height}
-                    fill="url(#autoRejectedPreviewStripe)"
-                  />
-                  {/* Zone 2: Reject → select threshold (white, unsure) */}
-                  <rect
-                    x={safeThresholdPositions.rejectX} y={0}
-                    width={Math.max(0, safeThresholdPositions.selectX - safeThresholdPositions.rejectX)}
-                    height={histogramChart.height}
-                    fill="#ffffff"
-                  />
-                  {/* Zone 3: Select threshold → right edge (Human auto stripe) */}
-                  <rect
-                    x={safeThresholdPositions.selectX} y={0}
-                    width={Math.max(0, histogramChart.width - safeThresholdPositions.selectX)}
-                    height={histogramChart.height}
-                    fill="url(#autoSelectedPreviewStripe)"
-                  />
+                  {/* 3 colored zone backgrounds — only in Apply stage */}
+                  {showThresholds && (
+                    <>
+                      {/* Zone 1: Left edge → reject threshold (LLM auto stripe) */}
+                      <rect
+                        x={0} y={0}
+                        width={Math.max(0, safeThresholdPositions.rejectX)}
+                        height={histogramChart.height}
+                        fill="url(#autoRejectedPreviewStripe)"
+                      />
+                      {/* Zone 2: Reject → select threshold (white, unsure) */}
+                      <rect
+                        x={safeThresholdPositions.rejectX} y={0}
+                        width={Math.max(0, safeThresholdPositions.selectX - safeThresholdPositions.rejectX)}
+                        height={histogramChart.height}
+                        fill="#ffffff"
+                      />
+                      {/* Zone 3: Select threshold → right edge (Human auto stripe) */}
+                      <rect
+                        x={safeThresholdPositions.selectX} y={0}
+                        width={Math.max(0, histogramChart.width - safeThresholdPositions.selectX)}
+                        height={histogramChart.height}
+                        fill="url(#autoSelectedPreviewStripe)"
+                      />
+                    </>
+                  )}
 
                   {/* Full-height hover hit areas for each bin */}
                   {histogramChart.bins.map((bin, binIndex) => {
@@ -406,40 +412,42 @@ const DecisionMarginHistogram: React.FC = () => {
                     Count
                   </text>
 
-                  {/* Dual threshold handles */}
-                  <ThresholdHandles
-                    orientation="horizontal"
-                    bounds={{ min: 0, max: histogramChart.width }}
-                    thresholds={[thresholds.reject, thresholds.select]}
-                    metricRange={{ min: safeThresholdPositions.minDomain, max: safeThresholdPositions.maxDomain }}
-                    position={{ x: 0, y: 0 }}
-                    lineBounds={{ min: 0, max: histogramChart.height }}
-                    showThresholdLine={true}
-                    onUpdate={handleThresholdUpdate}
-                    onDragUpdate={handleThresholdDragUpdate}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                  />
-
-                  {/* Threshold labels with arrows */}
-                  <g>
-                    <text
-                      x={labelPositions.leftX} y={-8}
-                      textAnchor="end" fontSize={14} fontWeight={600} fill="#272121ff"
-                    >
-                      <tspan fill={COLORS.rejected} fontSize={16}>{'← '}</tspan>
-                      <tspan>LLM</tspan>
-                    </text>
-                  </g>
-                  <g>
-                    <text
-                      x={labelPositions.rightX} y={-8}
-                      textAnchor="start" fontSize={14} fontWeight={600} fill="#000000"
-                    >
-                      <tspan>Human </tspan>
-                      <tspan fill={COLORS.selected} fontSize={16}>{'→'}</tspan>
-                    </text>
-                  </g>
+                  {/* Threshold handles + labels — only in Apply stage */}
+                  {showThresholds && (
+                    <>
+                      <ThresholdHandles
+                        orientation="horizontal"
+                        bounds={{ min: 0, max: histogramChart.width }}
+                        thresholds={[thresholds.reject, thresholds.select]}
+                        metricRange={{ min: safeThresholdPositions.minDomain, max: safeThresholdPositions.maxDomain }}
+                        position={{ x: 0, y: 0 }}
+                        lineBounds={{ min: 0, max: histogramChart.height }}
+                        showThresholdLine={true}
+                        onUpdate={handleThresholdUpdate}
+                        onDragUpdate={handleThresholdDragUpdate}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                      />
+                      <g>
+                        <text
+                          x={labelPositions.leftX} y={-8}
+                          textAnchor="end" fontSize={14} fontWeight={600} fill="#272121ff"
+                        >
+                          <tspan fill={COLORS.rejected} fontSize={16}>{'← '}</tspan>
+                          <tspan>LLM</tspan>
+                        </text>
+                      </g>
+                      <g>
+                        <text
+                          x={labelPositions.rightX} y={-8}
+                          textAnchor="start" fontSize={14} fontWeight={600} fill="#000000"
+                        >
+                          <tspan>Human </tspan>
+                          <tspan fill={COLORS.selected} fontSize={16}>{'→'}</tspan>
+                        </text>
+                      </g>
+                    </>
+                  )}
                 </g>
               </svg>
 

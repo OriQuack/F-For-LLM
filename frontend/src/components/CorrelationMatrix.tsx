@@ -19,8 +19,8 @@ const MIN_CELL = 4
 const PADDING = 4
 
 const colorScale = scaleLinear<string>()
-  .domain([-1, 0, 1])
-  .range(['#4575b4', '#ffffff', '#d73027'])
+  .domain([0, 1])
+  .range(['#ffffff', '#d73027'])
   .clamp(true)
 
 const grayScale = scaleLinear<string>()
@@ -138,7 +138,7 @@ export default function CorrelationMatrix({
                   y={vr * cellSize}
                   width={cellSize}
                   height={cellSize}
-                  fill={resolved ? grayScale(Math.abs(matrix[dataRow][col])) : colorScale(matrix[dataRow][col])}
+                  fill={resolved ? grayScale(Math.abs(matrix[dataRow][col])) : colorScale(Math.abs(matrix[dataRow][col]))}
                   onMouseEnter={handleMouseEnter}
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}

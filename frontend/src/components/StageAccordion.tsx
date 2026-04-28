@@ -7,7 +7,7 @@ import '../styles/StageAccordion.css'
 const STAGES: { key: ActiveStage; label: string; number: number; sortLabel: string }[] = [
   { key: 'bootstrap', label: 'Prototype', number: 1, sortLabel: 'Most Diverse First' },
   { key: 'learn', label: 'Uncertainty', number: 2, sortLabel: 'Most Uncertain First' },
-  { key: 'apply', label: 'Disagreement', number: 3, sortLabel: 'Most Confident First' },
+  { key: 'apply', label: 'Disagreement', number: 3, sortLabel: 'Least Confident First' },
 ]
 
 export default function StageAccordion() {

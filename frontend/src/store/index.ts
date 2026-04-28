@@ -365,6 +365,8 @@ export const useStore = create<AppState>((set, get) => ({
       blockSelectionStates: states,
       blockSelectionSources: sources,
       activeStage: 'apply',
+      hideTagged: true,
+      showDisagreementOnly: true,
     })
 
     // Retrain with the newly applied threshold tags
@@ -379,7 +381,11 @@ export const useStore = create<AppState>((set, get) => ({
   setIsDraggingThreshold: (dragging) => set({ isDraggingThreshold: dragging }),
 
   setActiveStage: (stage) => {
-    set({ activeStage: stage })
+    if (stage === 'apply') {
+      set({ activeStage: stage, hideTagged: true, showDisagreementOnly: true })
+    } else {
+      set({ activeStage: stage })
+    }
     get().selectFirstUntagged()
   },
 
@@ -414,11 +420,14 @@ export const useStore = create<AppState>((set, get) => ({
                (sb !== undefined ? Math.abs(sb) : Infinity)
       })
     } else if (s.activeStage === 'apply') {
+      list = list.filter((b) => {
+        const score = s.similarityScores.get(b.block_id)
+        return score !== undefined && (score >= s.selectThreshold || score <= s.rejectThreshold)
+      })
       list = [...list].sort((a, b) => {
-        const sa = s.similarityScores.get(a.block_id)
-        const sb = s.similarityScores.get(b.block_id)
-        return (sb !== undefined ? Math.abs(sb) : -Infinity) -
-               (sa !== undefined ? Math.abs(sa) : -Infinity)
+        const sa = s.similarityScores.get(a.block_id)!
+        const sb = s.similarityScores.get(b.block_id)!
+        return Math.abs(sa) - Math.abs(sb)
       })
     }
 
@@ -432,8 +441,10 @@ export const useStore = create<AppState>((set, get) => ({
     if (s.hideTagged) {
       list = list.filter((b) => {
         if (s.blockSelectionStates.has(b.block_id)) return false
-        const score = s.similarityScores.get(b.block_id)
-        if (score !== undefined && (score >= s.selectThreshold || score <= s.rejectThreshold)) return false
+        if (s.activeStage !== 'apply') {
+          const score = s.similarityScores.get(b.block_id)
+          if (score !== undefined && (score >= s.selectThreshold || score <= s.rejectThreshold)) return false
+        }
         return true
       })
     }

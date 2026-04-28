@@ -93,9 +93,41 @@
 }
 
 .feature-row__label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  padding: 0;
   margin: 0;
+  background: white;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 2px;
   cursor: pointer;
+  position: relative;
   flex-shrink: 0;
+  vertical-align: middle;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.feature-row__label input[type="checkbox"]:hover {
+  border-color: #94a3b8;
+}
+
+.feature-row__label input[type="checkbox"]:checked {
+  background: white;
+  border-color: #3b82f6;
+}
+
+.feature-row__label input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3.5px;
+  top: 0.5px;
+  width: 4px;
+  height: 7px;
+  border: solid #3b82f6;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
 }
 
 .feature-name--disabled {
@@ -186,5 +218,64 @@
   opacity: 0.7;
   margin-top: 2px;
   text-align: right;
+}
+
+/* ---- Correlation Matrix wrap (relative parent for legend overlay) ---- */
+
+.correlation-matrix-wrap {
+  position: relative;
+}
+
+/* ---- Correlation Legend ---- */
+/* Overlays the empty lower-right triangle of the matrix — no extra space */
+
+.correlation-legend {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.correlation-legend__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.correlation-legend__title {
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.correlation-legend__tick {
+  font-family: monospace;
+  font-size: 9px;
+  min-width: 12px;
+  text-align: center;
+}
+
+.correlation-legend__bar {
+  width: 70px;
+  height: 8px;
+  border: 1px solid #ccc;
+  border-radius: 1px;
+}
+
+.correlation-legend__bar--picked {
+  background: linear-gradient(to right, #ffffff, #d73027);
+}
+
+.correlation-legend__bar--gray {
+  background: linear-gradient(to right, #ffffff, #555555);
 }
 

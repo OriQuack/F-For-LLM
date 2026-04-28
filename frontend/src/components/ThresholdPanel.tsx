@@ -8,8 +8,9 @@ export default function ThresholdPanel() {
   const histogramData = useStore((s) => s.histogramData)
   const histogramStats = useStore((s) => s.histogramStatistics)
   const applyThresholdTags = useStore((s) => s.applyThresholdTags)
+  const activeStage = useStore((s) => s.activeStage)
 
-  const { isConverging, flipHistory } = useFlipTracking()
+  const { isConverging } = useFlipTracking()
 
   return (
     <div className="threshold-panel">
@@ -25,16 +26,12 @@ export default function ThresholdPanel() {
 
           <div className="threshold-apply-area">
             <button
-              className={`apply-btn ${isConverging ? 'pulsing' : ''}`}
+              className={`apply-btn ${isConverging && activeStage === 'apply' ? 'pulsing' : ''}`}
               onClick={applyThresholdTags}
+              disabled={activeStage !== 'apply'}
             >
               Apply Threshold
             </button>
-            <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
-              {flipHistory.length > 0
-                ? `Flip: ${(flipHistory[flipHistory.length - 1].flipRate * 100).toFixed(1)}%`
-                : ''}
-            </span>
           </div>
         </>
       )}

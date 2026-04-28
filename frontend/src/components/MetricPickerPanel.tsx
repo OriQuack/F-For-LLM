@@ -199,14 +199,30 @@ export default function MetricPickerPanel() {
       )}
 
       {showStats && filterSummary?.correlations && (
-        <CorrelationMatrix
-          metricNames={allMetricColumns}
-          correlations={filterSummary.correlations}
-          highlightedMetrics={highlightedMetrics}
-          enabledFeatures={enabledFeatures}
-          onHoverMetrics={handleHoverMetrics}
-          onClickMetrics={handleClickMetrics}
-        />
+        <div className="correlation-matrix-wrap">
+          <CorrelationMatrix
+            metricNames={allMetricColumns}
+            correlations={filterSummary.correlations}
+            highlightedMetrics={highlightedMetrics}
+            enabledFeatures={enabledFeatures}
+            onHoverMetrics={handleHoverMetrics}
+            onClickMetrics={handleClickMetrics}
+          />
+          <div className="correlation-legend">
+            <div className="correlation-legend__row">
+              <span className="correlation-legend__title">Picked (|r|)</span>
+              <span className="correlation-legend__tick">0</span>
+              <span className="correlation-legend__bar correlation-legend__bar--picked" />
+              <span className="correlation-legend__tick">1</span>
+            </div>
+            <div className="correlation-legend__row">
+              <span className="correlation-legend__title">Not picked (|r|)</span>
+              <span className="correlation-legend__tick">0</span>
+              <span className="correlation-legend__bar correlation-legend__bar--gray" />
+              <span className="correlation-legend__tick">1</span>
+            </div>
+          </div>
+        </div>
       )}
 
       {hovered && tooltipData && (

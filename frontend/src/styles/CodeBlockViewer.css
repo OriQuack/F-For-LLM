@@ -63,16 +63,16 @@
 .code-viewer-actions {
   display: flex;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 4px 14px;
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 .code-viewer-actions button {
-  padding: 4px 12px;
+  padding: 6px 18px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .code-viewer-actions .btn-human {
