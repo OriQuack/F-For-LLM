@@ -40,16 +40,16 @@ npm run typecheck   # TypeScript type checking only
 3. **Disagreement** (apply) — Thresholds auto-classify remaining blocks
 
 ### Backend (`backend/app/`)
-- **`api/`** — FastAPI routers: `blocks.py` (GET block data + feature filter stats), `classification.py` (POST similarity scoring), `cold_start.py` (POST Kennard-Stone suggestions)
+- **`api/`** — FastAPI routers: `blocks.py` (GET block data + feature filter stats), `classification.py` (POST similarity scoring), `cold_start.py` (POST TypiClust suggestions)
 - **`services/`** — Core ML logic:
   - `classification_service.py` — Orchestrates SVM training and committee voting; supports per-request feature subset selection via `selected_features`
   - `svm_utils.py` — SVM with RBF kernel, LRU-cached models (keyed by selection hash), decision function scores
   - `committee_service.py` — Query by Committee: Random Forest + MLP ensemble, vote entropy for uncertainty; extracts feature importances from RF
   - `pytorch_mlp.py` — sklearn-compatible MLP with sample weight support, early stopping
   - `cold_start_service.py` — TypiClust: KMeans clustering + KNN typicality scoring for diversity sampling
-  - `data_service.py` — Loads/serves Parquet files via Polars LazyFrames; runs feature filtering on init, stores both `all_metric_columns` (original) and `metric_columns` (filtered)
+  - `data_service.py` — Loads/serves Parquet files via Polars LazyFrames; runs feature filtering on init, stores both `all_metric_columns` (original) and `metric_columns` (filtered). When `CLASSROOM_DATASET` is set, loads `classroom_{N}.parquet` as labels and scopes blocks/metrics to that subset.
   - `feature_filter.py` — Unsupervised feature filtering: flags low-variance and highly-correlated columns as recommendations (does not remove them); thresholds configurable
-  - `constants.py` — `CLICK_WEIGHT=1.0`, `THRESHOLD_WEIGHT=0.2`, `VARIANCE_THRESHOLD=1e-4`, `CORRELATION_THRESHOLD=0.95`
+  - `constants.py` — `CLICK_WEIGHT=1.0`, `THRESHOLD_WEIGHT=0.2`, `VARIANCE_THRESHOLD=1e-4`, `CORRELATION_THRESHOLD=0.95`, `CLASSROOM_DATASET` (None | "10" | "25" | "50")
 - **`models/`** — Pydantic request/response schemas (BlockListResponse includes `all_metric_columns` and `filter_summary`; SimilarityHistogramResponse includes `feature_importances`)
 - Services initialize during FastAPI lifespan and are stored globally
 
@@ -75,3 +75,5 @@ Selections have a `source` field: `'click'` (manual, weight 1.0), `'threshold'` 
 ### Data (`data/output/`)
 - `blocks.parquet` — block_id, file_path, block_type, block_name, language, code, etc.
 - `metrics.parquet` — block_id + numeric feature columns (e.g. avg_line_length, cyclomatic_complexity)
+- `labels.parquet` — block_id + label/dataset/language/ai_model/generation_mode/problem_id/group_id/split/source_path/sample_id/pair_id
+- `classroom_{10,25,50}.parquet` — simulated classroom datasets (80 students × 5 assignments) produced by `pipeline/simulate_classroom.py`. Drop-in compatible with `labels.parquet` schema, plus `student_id`, `assignment_id`, `used_llm` columns. Selected via `CLASSROOM_DATASET` constant.

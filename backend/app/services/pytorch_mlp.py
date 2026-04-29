@@ -127,9 +127,13 @@ class WeightedMLPClassifier:
         self : WeightedMLPClassifier
             Fitted estimator.
         """
+        # Local RNGs so we don't pollute global numpy/torch state
+        np_rng = np.random.RandomState(self.random_state)
+        torch_gen = torch.Generator()
         if self.random_state is not None:
-            torch.manual_seed(self.random_state)
-            np.random.seed(self.random_state)
+            torch_gen.manual_seed(self.random_state)
+        self._np_rng = np_rng
+        self._torch_gen = torch_gen
 
         # Convert to numpy arrays
         X = np.asarray(X, dtype=np.float32)
@@ -170,9 +174,14 @@ class WeightedMLPClassifier:
         else:
             X_val_t, y_val_t, w_val_t = None, None, None
 
-        # Initialize model
+        # Initialize model with deterministic params if random_state set
         input_dim = X_train.shape[1]
-        self._model = _MLPNetwork(input_dim, self.hidden_layer_sizes, n_classes, self.dropout)
+        if self.random_state is not None:
+            with torch.random.fork_rng():
+                torch.manual_seed(self.random_state)
+                self._model = _MLPNetwork(input_dim, self.hidden_layer_sizes, n_classes, self.dropout)
+        else:
+            self._model = _MLPNetwork(input_dim, self.hidden_layer_sizes, n_classes, self.dropout)
 
         # Optimizer with weight_decay for L2 regularization (matches sklearn's alpha)
         optimizer = torch.optim.Adam(
@@ -189,12 +198,13 @@ class WeightedMLPClassifier:
         # Loss function with per-sample losses
         criterion = nn.CrossEntropyLoss(reduction='none')
 
-        # Create data loader
+        # Create data loader (use local generator so shuffling doesn't touch global RNG)
         train_dataset = TensorDataset(X_train_t, y_train_t, w_train_t)
         train_loader = DataLoader(
             train_dataset,
             batch_size=min(self.batch_size, len(X_train)),
-            shuffle=True
+            shuffle=True,
+            generator=self._torch_gen,
         )
 
         # Training loop
@@ -254,9 +264,7 @@ class WeightedMLPClassifier:
             n_val = n_samples - 1
 
         indices = np.arange(n_samples)
-        if self.random_state is not None:
-            np.random.seed(self.random_state)
-        np.random.shuffle(indices)
+        self._np_rng.shuffle(indices)
 
         val_idx = indices[:n_val]
         train_idx = indices[n_val:]

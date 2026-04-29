@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from .feature_filter import FilterResult, filter_features
-from .constants import VARIANCE_THRESHOLD, CORRELATION_THRESHOLD
+from .constants import VARIANCE_THRESHOLD, CORRELATION_THRESHOLD, CLASSROOM_DATASET
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,15 @@ class DataService:
 
         blocks_path = data_dir / "blocks.parquet"
         metrics_path = data_dir / "metrics.parquet"
-        labels_path = data_dir / "labels.parquet"
+        if CLASSROOM_DATASET is not None:
+            labels_path = data_dir / f"classroom_{CLASSROOM_DATASET}.parquet"
+            if not labels_path.exists():
+                raise FileNotFoundError(
+                    f"CLASSROOM_DATASET='{CLASSROOM_DATASET}' but {labels_path} not found. "
+                    f"Run: python pipeline/simulate_classroom.py"
+                )
+        else:
+            labels_path = data_dir / "labels.parquet"
 
         if not blocks_path.exists():
             raise FileNotFoundError(f"blocks.parquet not found at {blocks_path}")
@@ -39,8 +47,27 @@ class DataService:
         self._blocks_df = pl.read_parquet(blocks_path)
         logger.info(f"Loaded {len(self._blocks_df)} blocks")
 
+        if labels_path.exists():
+            self._labels_df = pl.read_parquet(labels_path)
+            logger.info(f"Loaded {len(self._labels_df)} labels from {labels_path.name}")
+        else:
+            logger.warning(f"{labels_path.name} not found — offline evaluation metadata unavailable")
+
+        if CLASSROOM_DATASET is not None and self._labels_df is not None:
+            scoped_ids = self._labels_df["block_id"].unique().to_list()
+            before = len(self._blocks_df)
+            self._blocks_df = self._blocks_df.filter(pl.col("block_id").is_in(scoped_ids))
+            logger.info(
+                f"Classroom dataset '{CLASSROOM_DATASET}': scoped blocks {before} -> {len(self._blocks_df)}"
+            )
+
         if metrics_path.exists():
             self._metrics_lazy = pl.scan_parquet(metrics_path)
+            if CLASSROOM_DATASET is not None and self._labels_df is not None:
+                scoped_ids = self._labels_df["block_id"].unique().to_list()
+                self._metrics_lazy = self._metrics_lazy.filter(
+                    pl.col("block_id").is_in(scoped_ids)
+                )
             schema = pl.read_parquet_schema(metrics_path)
             all_cols = [c for c in schema if c != "block_id"]
             self._all_metric_columns = all_cols
@@ -65,12 +92,6 @@ class DataService:
             logger.info(f"Loaded metrics with columns: {self._metric_columns}")
         else:
             logger.warning("metrics.parquet not found — metric features unavailable")
-
-        if labels_path.exists():
-            self._labels_df = pl.read_parquet(labels_path)
-            logger.info(f"Loaded {len(self._labels_df)} labels")
-        else:
-            logger.warning("labels.parquet not found — offline evaluation metadata unavailable")
 
         self._ready = True
 

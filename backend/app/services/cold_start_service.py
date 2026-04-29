@@ -100,23 +100,24 @@ class ColdStartService:
                 idx = int(cluster_mask[best_local])
                 use_typicality = True
 
-            # Avoid duplicates
+            # Avoid duplicates — skip cluster entirely if no replacement exists
             if idx in selected:
                 if use_typicality:
                     order = np.argsort(-typicality)
-                    for alt in order:
-                        alt_idx = int(cluster_mask[alt])
-                        if alt_idx not in selected:
-                            idx = alt_idx
-                            break
                 else:
                     dists = np.linalg.norm(X[cluster_mask] - km.cluster_centers_[c], axis=1)
                     order = np.argsort(dists)
-                    for alt in order:
-                        alt_idx = int(cluster_mask[alt])
-                        if alt_idx not in selected:
-                            idx = alt_idx
-                            break
+
+                replacement = None
+                for alt in order:
+                    alt_idx = int(cluster_mask[alt])
+                    if alt_idx not in selected:
+                        replacement = alt_idx
+                        break
+
+                if replacement is None:
+                    continue
+                idx = replacement
 
             selected.append(idx)
 
