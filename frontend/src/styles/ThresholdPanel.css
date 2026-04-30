@@ -48,6 +48,34 @@
   animation: pulse 1.5s ease-in-out infinite;
 }
 
+.btn-tooltip-wrap {
+  display: inline-flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-tooltip-wrap > button {
+  width: 100%;
+}
+
+.download-btn {
+  padding: 10px 16px;
+  font-weight: 600;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+}
+
+.download-btn:not(:disabled):hover {
+  background: var(--color-surface-hover);
+}
+
+.download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
   50% { box-shadow: 0 0 0 8px rgba(76, 175, 80, 0); }

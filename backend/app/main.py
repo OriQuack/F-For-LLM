@@ -10,7 +10,7 @@ from .api import router as api_router
 from .services.data_service import DataService
 from .services.classification_service import ClassificationService
 from .services.cold_start_service import ColdStartService
-from .api import blocks, classification, cold_start
+from .api import blocks, classification, cold_start, export
 
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
         logger.info("ColdStartService initialized")
 
         blocks.set_data_service(data_service)
+        export.set_data_service(data_service)
 
         yield
     except Exception as e:

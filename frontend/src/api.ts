@@ -81,3 +81,20 @@ export async function fetchColdStartSuggestions(
   })
   return res.suggestion_ids
 }
+
+// ---- Export ----
+
+export interface BlockResult {
+  block_id: number
+  label: string
+  source: string
+  score?: number | null
+}
+
+export async function fetchClassroomExport(
+  blockResults: BlockResult[],
+): Promise<unknown> {
+  return post<unknown>(`${BASE}/export/classroom`, {
+    block_results: blockResults,
+  })
+}

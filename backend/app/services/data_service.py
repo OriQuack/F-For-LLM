@@ -145,6 +145,22 @@ class DataService:
         return self._labels_df.filter(pl.col("block_id").is_in(block_ids))
 
     @property
+    def labels_df(self) -> Optional[pl.DataFrame]:
+        return self._labels_df
+
+    @property
+    def blocks_df(self) -> Optional[pl.DataFrame]:
+        return self._blocks_df
+
+    @property
+    def is_classroom(self) -> bool:
+        return CLASSROOM_DATASET is not None
+
+    @property
+    def classroom_dataset(self) -> Optional[str]:
+        return CLASSROOM_DATASET
+
+    @property
     def metric_columns(self) -> List[str]:
         return self._metric_columns
 

@@ -181,7 +181,9 @@ export const useStore = create<AppState>((set, get) => ({
       const resp = await fetchBlocks()
       const { blocks, metric_columns } = resp
       const blockIds = blocks.map((b) => b.block_id)
-      const diversityIdsArr = await fetchColdStartSuggestions(blockIds, 30)
+      const diversityIdsArr = await fetchColdStartSuggestions(blockIds, 20)
+      const diversitySet = new Set(diversityIdsArr)
+      const topBootstrapBlock = blocks.find((b) => diversitySet.has(b.block_id))
 
       set({
         blocks,
@@ -192,10 +194,10 @@ export const useStore = create<AppState>((set, get) => ({
           resp.filter_summary ?? null,
         ),
         filterSummary: resp.filter_summary ?? null,
-        diversityIds: new Set(diversityIdsArr),
+        diversityIds: diversitySet,
         initialized: true,
         isLoading: false,
-        currentBlockId: diversityIdsArr[0] ?? blocks[0]?.block_id ?? null,
+        currentBlockId: topBootstrapBlock?.block_id ?? blocks[0]?.block_id ?? null,
       })
     } catch (e) {
       console.error('Failed to initialize:', e)
@@ -343,8 +345,8 @@ export const useStore = create<AppState>((set, get) => ({
     for (const block of blocks) {
       const score = similarityScores.get(block.block_id)
       if (score === undefined) continue
-      // Don't override manual (click) tags
-      if (sources.get(block.block_id) === 'click') continue
+      // Only tag currently-unsure blocks; leave already-applied ones alone
+      if (states.has(block.block_id)) continue
 
       if (score >= selectThreshold) {
         states.set(block.block_id, 'selected')
@@ -352,12 +354,6 @@ export const useStore = create<AppState>((set, get) => ({
       } else if (score <= rejectThreshold) {
         states.set(block.block_id, 'rejected')
         sources.set(block.block_id, 'threshold')
-      } else {
-        // Clear previous auto-tags in the middle zone
-        if (sources.get(block.block_id) === 'threshold') {
-          states.delete(block.block_id)
-          sources.delete(block.block_id)
-        }
       }
     }
 
