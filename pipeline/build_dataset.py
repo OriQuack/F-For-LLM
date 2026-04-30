@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 import polars as pl
+from tqdm import tqdm
 
 try:
     from .extract_blocks import ExtractionConfig, extract_blocks_from_sample
@@ -52,9 +53,11 @@ def parse_args():
     parser.add_argument("--aigcodeset-limit-rows", type=int, default=None)
 
     parser.add_argument("--enable-lm-features", action="store_true")
-    parser.add_argument("--lm-model-name", default="microsoft/codebert-base")
+    parser.add_argument("--lm-model-name", default="microsoft/codebert-base-mlm")
     parser.add_argument("--lm-max-length", type=int, default=256)
     parser.add_argument("--lm-max-scored-tokens", type=int, default=128)
+    parser.add_argument("--lm-batch-size", type=int, default=32)
+    parser.add_argument("--lm-fp32", action="store_true", help="Disable fp16 even on CUDA.")
 
     return parser.parse_args()
 
@@ -117,8 +120,13 @@ def main():
             model_name=args.lm_model_name,
             max_length=args.lm_max_length,
             max_scored_tokens=args.lm_max_scored_tokens,
+            batch_size=args.lm_batch_size,
+            fp16=False if args.lm_fp32 else None,
         )
-        print("[metric] LM features enabled")
+        print(
+            f"[metric] LM features enabled (model={args.lm_model_name}, "
+            f"batch_size={args.lm_batch_size}, fp16={not args.lm_fp32})"
+        )
     else:
         print("[metric] LM features disabled (zero-filled)")
 
@@ -128,7 +136,8 @@ def main():
 
     next_block_id = 0
 
-    for sample in samples:
+    pbar = tqdm(samples, desc="extract+metrics", unit="sample", dynamic_ncols=True)
+    for sample in pbar:
         gkey = sample_group_key(sample)
         sample_split = split_map[gkey]
 
@@ -169,6 +178,8 @@ def main():
                 "source_path": sample.source_path,
             })
             next_block_id += 1
+
+        pbar.set_postfix(blocks=next_block_id)
 
     if not blocks:
         raise RuntimeError("No blocks extracted. Check extraction rules and min_loc.")

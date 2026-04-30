@@ -30,7 +30,7 @@ class FilterResult:
 def filter_features(
     column_names: List[str],
     matrix: np.ndarray,
-    variance_threshold: float,
+    cv_threshold: float,
     correlation_threshold: float,
 ) -> FilterResult:
     """Compute variance and correlation stats for all features.
@@ -41,7 +41,9 @@ def filter_features(
     Args:
         column_names: Feature names matching matrix columns.
         matrix: (n_samples, n_features) numeric array.
-        variance_threshold: Columns with variance below this are flagged.
+        cv_threshold: Columns with coefficient of variation (std / |mean|)
+            below this are flagged. When |mean| ≈ 0, std is used directly so
+            that columns clustered near zero are still caught.
         correlation_threshold: Pairs with |r| above this are flagged.
 
     Returns:
@@ -52,12 +54,19 @@ def filter_features(
     # Compute per-column variance and mean
     variances_arr = np.var(matrix, axis=0)
     means_arr = np.mean(matrix, axis=0)
+    stds_arr = np.sqrt(variances_arr)
     variances = {name: float(v) for name, v in zip(column_names, variances_arr)}
     means = {name: float(m) for name, m in zip(column_names, means_arr)}
 
-    # Flag low-variance columns (recommendations only)
+    # Coefficient of variation (scale-invariant). Fall back to std when |mean|
+    # is near zero so that constant-zero columns are still flagged.
+    abs_means = np.abs(means_arr)
+    near_zero_mean = abs_means < 1e-10
+    cv_arr = np.where(near_zero_mean, stds_arr, stds_arr / np.where(near_zero_mean, 1.0, abs_means))
+
+    # Flag low-CV columns (recommendations only)
     removed_low_variance = [
-        name for name, v in zip(column_names, variances_arr) if v < variance_threshold
+        name for name, c in zip(column_names, cv_arr) if c < cv_threshold
     ]
 
     # Compute correlation pairs above threshold

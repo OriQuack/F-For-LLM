@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect, useRef } from 'react'
 import { useStore } from '../store'
 import type { ActiveStage } from '../types'
 import ItemList from './ItemList'
@@ -26,6 +26,26 @@ export default function StageAccordion() {
   const diversityIds = useStore((s) => s.diversityIds)
   const selectThreshold = useStore((s) => s.selectThreshold)
   const rejectThreshold = useStore((s) => s.rejectThreshold)
+  const enabledFeatures = useStore((s) => s.enabledFeatures)
+  const initialized = useStore((s) => s.initialized)
+  const refetchColdStart = useStore((s) => s.refetchColdStart)
+
+  const lastColdStartSigRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!initialized) return
+    if (activeStage !== 'bootstrap') return
+    const sig = [...enabledFeatures].sort().join('|')
+    if (lastColdStartSigRef.current === null) {
+      lastColdStartSigRef.current = sig
+      return
+    }
+    if (lastColdStartSigRef.current === sig) return
+    const id = setTimeout(() => {
+      lastColdStartSigRef.current = sig
+      refetchColdStart()
+    }, 300)
+    return () => clearTimeout(id)
+  }, [enabledFeatures, activeStage, initialized, refetchColdStart])
 
   const hasScores = histogramData !== null
   const currentStage = STAGES.find((s) => s.key === activeStage)!

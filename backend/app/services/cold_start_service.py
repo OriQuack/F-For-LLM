@@ -8,7 +8,7 @@ scoring to bootstrap active learning when no labels exist yet.
 import numpy as np
 import logging
 import random
-from typing import List
+from typing import List, Optional
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
@@ -25,11 +25,19 @@ class ColdStartService:
         self.data_service = data_service
 
     async def get_suggestions(
-        self, block_ids: List[int], num_suggestions: int = 30
+        self, block_ids: List[int], num_suggestions: int = 30,
+        selected_features: Optional[List[str]] = None,
     ) -> List[int]:
         """Select diverse block IDs using TypiClust."""
         metrics_df = self.data_service.get_metrics(block_ids)
-        metric_cols = self.data_service.metric_columns
+
+        if selected_features is not None:
+            valid_set = set(self.data_service.all_metric_columns)
+            metric_cols = [f for f in selected_features if f in valid_set]
+            if not metric_cols:
+                metric_cols = self.data_service.metric_columns
+        else:
+            metric_cols = self.data_service.metric_columns
 
         if metrics_df is None or len(metrics_df) == 0 or not metric_cols:
             return self._random_fallback(block_ids, num_suggestions)

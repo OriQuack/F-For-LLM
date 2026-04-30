@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from .feature_filter import FilterResult, filter_features
-from .constants import VARIANCE_THRESHOLD, CORRELATION_THRESHOLD, CLASSROOM_DATASET
+from .constants import CV_THRESHOLD, CORRELATION_THRESHOLD, CLASSROOM_DATASET
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class DataService:
                     for col in all_cols
                 ])
                 self._filter_result = filter_features(
-                    all_cols, matrix, VARIANCE_THRESHOLD, CORRELATION_THRESHOLD,
+                    all_cols, matrix, CV_THRESHOLD, CORRELATION_THRESHOLD,
                 )
                 self._metric_columns = self._filter_result.surviving_columns
                 logger.info(

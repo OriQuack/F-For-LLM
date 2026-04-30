@@ -5,6 +5,7 @@ data/input/*
 .claude/
 *__pycache__
 venv/
+temp/
 *.env
 *.png
 *.log

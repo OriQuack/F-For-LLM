@@ -74,10 +74,12 @@ interface ColdStartResponse {
 export async function fetchColdStartSuggestions(
   blockIds: number[],
   n: number = 30,
+  selectedFeatures?: string[],
 ): Promise<number[]> {
   const res = await post<ColdStartResponse>(`${BASE}/cold-start/representative`, {
     block_ids: blockIds,
     num_suggestions: n,
+    ...(selectedFeatures && { selected_features: selectedFeatures }),
   })
   return res.suggestion_ids
 }

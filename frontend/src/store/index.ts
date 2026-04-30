@@ -118,6 +118,7 @@ interface AppState {
   setHideTagged: (hide: boolean) => void
   setShowDisagreementOnly: (show: boolean) => void
   setFeatureEnabled: (feature: string, enabled: boolean) => void
+  refetchColdStart: () => Promise<void>
 
   // Navigation
   getFilteredBlocks: () => CodeBlock[]
@@ -180,19 +181,18 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const resp = await fetchBlocks()
       const { blocks, metric_columns } = resp
+      const allCols = resp.all_metric_columns ?? metric_columns
+      const enabled = computeDefaultEnabled(allCols, resp.filter_summary ?? null)
       const blockIds = blocks.map((b) => b.block_id)
-      const diversityIdsArr = await fetchColdStartSuggestions(blockIds, 20)
+      const diversityIdsArr = await fetchColdStartSuggestions(blockIds, 20, Array.from(enabled))
       const diversitySet = new Set(diversityIdsArr)
       const topBootstrapBlock = blocks.find((b) => diversitySet.has(b.block_id))
 
       set({
         blocks,
         metricColumns: metric_columns,
-        allMetricColumns: resp.all_metric_columns ?? metric_columns,
-        enabledFeatures: computeDefaultEnabled(
-          resp.all_metric_columns ?? metric_columns,
-          resp.filter_summary ?? null,
-        ),
+        allMetricColumns: allCols,
+        enabledFeatures: enabled,
         filterSummary: resp.filter_summary ?? null,
         diversityIds: diversitySet,
         initialized: true,
@@ -201,6 +201,26 @@ export const useStore = create<AppState>((set, get) => ({
       })
     } catch (e) {
       console.error('Failed to initialize:', e)
+      set({ isLoading: false })
+    }
+  },
+
+  refetchColdStart: async () => {
+    const { blocks, enabledFeatures, activeStage } = get()
+    if (blocks.length === 0) return
+    set({ isLoading: true })
+    try {
+      const blockIds = blocks.map((b) => b.block_id)
+      const diversityIdsArr = await fetchColdStartSuggestions(
+        blockIds, 20, Array.from(enabledFeatures),
+      )
+      const diversitySet = new Set(diversityIdsArr)
+      set({ diversityIds: diversitySet, isLoading: false })
+      if (activeStage === 'bootstrap') {
+        get().selectFirstUntagged()
+      }
+    } catch (e) {
+      console.error('Failed to refetch cold start:', e)
       set({ isLoading: false })
     }
   },

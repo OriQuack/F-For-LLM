@@ -19,6 +19,6 @@ async def cold_start_representative(request: ColdStartRequest):
         raise HTTPException(status_code=503, detail="Service not ready")
 
     ids = await _cold_start_service.get_suggestions(
-        request.block_ids, request.num_suggestions
+        request.block_ids, request.num_suggestions, request.selected_features
     )
     return ColdStartResponse(suggestion_ids=ids)
