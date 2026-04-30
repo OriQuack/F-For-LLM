@@ -6,6 +6,7 @@ data/input/*
 *__pycache__
 venv/
 temp/
+backend/logs/
 *.env
 *.png
 *.log

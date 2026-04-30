@@ -6,10 +6,13 @@ import sys
 import os
 from contextlib import asynccontextmanager
 
+from pathlib import Path
+
 from .api import router as api_router
 from .services.data_service import DataService
 from .services.classification_service import ClassificationService
 from .services.cold_start_service import ColdStartService
+from .services.tag_logger import TagLogger
 from .api import blocks, classification, cold_start, export
 
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -32,7 +35,8 @@ async def lifespan(app: FastAPI):
         await data_service.initialize()
         logger.info("DataService initialized")
 
-        cls_service = ClassificationService(data_service)
+        tag_logger = TagLogger(Path("logs/tag_log.jsonl"))
+        cls_service = ClassificationService(data_service, tag_logger=tag_logger)
         classification.set_classification_service(cls_service)
         logger.info("ClassificationService initialized")
 

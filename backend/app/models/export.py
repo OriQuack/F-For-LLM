@@ -44,3 +44,19 @@ class ExportResponse(BaseModel):
     n_students: int
     n_assignments: int
     students: List[StudentExportEntry]
+
+
+class FlatBlockExportEntry(BlockExportEntry):
+    ground_truth_label: Optional[int] = None
+    problem_id: Optional[str] = None
+    pair_id: Optional[str] = None
+    sample_id: Optional[str] = None
+    ai_model: Optional[str] = None
+    generation_mode: Optional[str] = None
+    source_dataset: Optional[str] = None
+
+
+class FlatExportResponse(BaseModel):
+    dataset: str
+    n_blocks: int
+    blocks: List[FlatBlockExportEntry]

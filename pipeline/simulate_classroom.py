@@ -23,13 +23,71 @@ def parse_args():
     p.add_argument("--n-assignments", type=int, default=5)
     p.add_argument("--rates", nargs="+", type=float, default=[0.5, 0.25, 0.1])
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--balanced-per-label",
+        type=int,
+        default=None,
+        help="If set, restrict the input pool to N humans + N LLMs (problem-stratified). "
+             "Must match backend constants.BALANCED_PER_LABEL to keep the views aligned.",
+    )
     return p.parse_args()
+
+
+def _balanced_subset(labels_df: pl.DataFrame, n_per_label: int, seed: int) -> pl.DataFrame:
+    """Mirror of backend.app.services.data_service.balanced_subset.
+
+    Both must produce identical block-id sets for the same (n_per_label, seed).
+    """
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    human = labels_df.filter(pl.col("label") == 0)
+    llm = labels_df.filter(pl.col("label") == 1)
+    problems_with_both = (
+        human.select("problem_id").unique()
+        .join(llm.select("problem_id").unique(), on="problem_id", how="inner")
+        .get_column("problem_id")
+        .to_list()
+    )
+    if len(problems_with_both) < n_per_label:
+        raise RuntimeError(
+            f"Need {n_per_label} problems with both human + LLM blocks, "
+            f"have {len(problems_with_both)}"
+        )
+    problems_with_both.sort()
+    picked = list(rng.choice(problems_with_both, size=n_per_label, replace=False))
+    picked_set = set(picked)
+
+    human_keep = human.filter(pl.col("problem_id").is_in(picked_set))
+    if human_keep.height != n_per_label:
+        human_keep = (
+            human_keep.sort(["problem_id", "block_id"])
+            .group_by("problem_id", maintain_order=True)
+            .head(1)
+        )
+    llm_pool = llm.filter(pl.col("problem_id").is_in(picked_set))
+    llm_groups = (
+        llm_pool.sort(["problem_id", "block_id"])
+        .group_by("problem_id")
+        .agg(pl.col("block_id").alias("block_ids"))
+        .sort("problem_id")  # deterministic iteration order
+    )
+    chosen_llm_ids = [int(rng.choice(row["block_ids"])) for row in llm_groups.iter_rows(named=True)]
+    llm_keep = llm_pool.filter(pl.col("block_id").is_in(chosen_llm_ids))
+    return pl.concat([human_keep, llm_keep])
 
 
 def main():
     args = parse_args()
     rng = random.Random(args.seed)
     labels = pl.read_parquet(args.labels)
+
+    if args.balanced_per_label is not None:
+        before = labels.height
+        labels = _balanced_subset(labels, args.balanced_per_label, args.seed)
+        print(
+            f"[balance] applied N={args.balanced_per_label} per label "
+            f"(seed={args.seed}): {before} -> {labels.height} rows"
+        )
 
     human_per_problem = (
         labels.filter(pl.col("label") == 0)

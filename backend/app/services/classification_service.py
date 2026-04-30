@@ -23,6 +23,7 @@ from .committee_service import CommitteeService
 from .constants import CLICK_WEIGHT, THRESHOLD_WEIGHT
 from .data_service import DataService
 from .svm_utils import train_svm_model, score_with_svm, build_similarity_histogram_response
+from .tag_logger import TagLogger
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +31,12 @@ logger = logging.getLogger(__name__)
 class ClassificationService:
     """Binary SVM scoring for code blocks."""
 
-    def __init__(self, data_service: DataService):
+    def __init__(self, data_service: DataService, tag_logger: Optional[TagLogger] = None):
         self.data_service = data_service
         self.committee_service = CommitteeService()
         self._svm_cache: Dict[str, Tuple[SVC, StandardScaler]] = {}
         self._max_cache_size = 100
+        self._tag_logger = tag_logger
 
     def _extract_metrics(
         self, block_ids: List[int], feature_columns: Optional[List[str]] = None,
@@ -135,6 +137,9 @@ class ClassificationService:
         # Score all blocks
         scores = score_with_svm(model, scaler, metrics_matrix)
         scores_dict = {str(int(bid)): float(s) for bid, s in zip(block_ids_arr, scores)}
+
+        if self._tag_logger is not None:
+            self._tag_logger.log(request, scores_dict, self.data_service)
 
         # Train committee — pre-scale with SVM scaler, skip committee's own scaling
         X_train = np.vstack([sel_vectors, rej_vectors])

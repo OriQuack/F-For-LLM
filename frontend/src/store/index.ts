@@ -23,7 +23,7 @@ import { FLIP_HISTORY_WINDOW_SIZE } from '../lib/constants'
 // HELPERS
 // ============================================================================
 
-const MAX_ENABLED = 20
+const MAX_ENABLED = 15
 
 function computeDefaultEnabled(
   allColumns: string[],

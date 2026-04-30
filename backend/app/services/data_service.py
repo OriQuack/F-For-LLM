@@ -7,9 +7,69 @@ from pathlib import Path
 from typing import List, Optional
 
 from .feature_filter import FilterResult, filter_features
-from .constants import CV_THRESHOLD, CORRELATION_THRESHOLD, CLASSROOM_DATASET
+from .constants import (
+    CV_THRESHOLD,
+    CORRELATION_THRESHOLD,
+    CLASSROOM_DATASET,
+    BALANCED_PER_LABEL,
+    BALANCED_SAMPLE_SEED,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def balanced_subset(
+    labels_df: pl.DataFrame, n_per_label: int, seed: int
+) -> pl.DataFrame:
+    """Problem-stratified balanced sample.
+
+    Picks `n_per_label` problems uniformly (seeded), then keeps every human block
+    plus one randomly chosen LLM block from each picked problem. Result has
+    `n_per_label` human and `n_per_label` LLM rows, all paired by `problem_id`.
+
+    Raises if fewer than `n_per_label` problems have both human and LLM blocks.
+
+    Mirrored by simulate_classroom.py's --balanced-per-label CLI arg; the two
+    implementations must produce identical block-id sets for the same (n, seed).
+    """
+    rng = np.random.default_rng(seed)
+    human = labels_df.filter(pl.col("label") == 0)
+    llm = labels_df.filter(pl.col("label") == 1)
+    problems_with_both = (
+        human.select("problem_id").unique()
+        .join(llm.select("problem_id").unique(), on="problem_id", how="inner")
+        .get_column("problem_id")
+        .to_list()
+    )
+    if len(problems_with_both) < n_per_label:
+        raise RuntimeError(
+            f"Need {n_per_label} problems with both human + LLM blocks, "
+            f"have {len(problems_with_both)}"
+        )
+    problems_with_both.sort()  # deterministic order before shuffle
+    picked = list(rng.choice(problems_with_both, size=n_per_label, replace=False))
+
+    picked_set = set(picked)
+    human_keep = human.filter(pl.col("problem_id").is_in(picked_set))
+    if human_keep.height != n_per_label:
+        # If a problem yields >1 human block, keep the lowest block_id (deterministic).
+        human_keep = (
+            human_keep.sort(["problem_id", "block_id"])
+            .group_by("problem_id", maintain_order=True)
+            .head(1)
+        )
+    llm_pool = llm.filter(pl.col("problem_id").is_in(picked_set))
+    llm_groups = (
+        llm_pool.sort(["problem_id", "block_id"])
+        .group_by("problem_id")
+        .agg(pl.col("block_id").alias("block_ids"))
+        .sort("problem_id")  # deterministic iteration order
+    )
+    chosen_llm_ids = []
+    for row in llm_groups.iter_rows(named=True):
+        chosen_llm_ids.append(int(rng.choice(row["block_ids"])))
+    llm_keep = llm_pool.filter(pl.col("block_id").is_in(chosen_llm_ids))
+    return pl.concat([human_keep, llm_keep])
 
 
 class DataService:
@@ -53,17 +113,38 @@ class DataService:
         else:
             logger.warning(f"{labels_path.name} not found — offline evaluation metadata unavailable")
 
-        if CLASSROOM_DATASET is not None and self._labels_df is not None:
+        if (
+            CLASSROOM_DATASET is None
+            and BALANCED_PER_LABEL is not None
+            and self._labels_df is not None
+        ):
+            before = len(self._labels_df)
+            self._labels_df = balanced_subset(
+                self._labels_df, BALANCED_PER_LABEL, BALANCED_SAMPLE_SEED
+            )
+            logger.info(
+                f"Balanced subset (N={BALANCED_PER_LABEL} per label, seed={BALANCED_SAMPLE_SEED}): "
+                f"labels {before} -> {len(self._labels_df)}"
+            )
+
+        if (CLASSROOM_DATASET is not None or BALANCED_PER_LABEL is not None) and self._labels_df is not None:
             scoped_ids = self._labels_df["block_id"].unique().to_list()
             before = len(self._blocks_df)
             self._blocks_df = self._blocks_df.filter(pl.col("block_id").is_in(scoped_ids))
+            scope_tag = (
+                f"classroom '{CLASSROOM_DATASET}'"
+                if CLASSROOM_DATASET is not None
+                else f"balanced (N={BALANCED_PER_LABEL})"
+            )
             logger.info(
-                f"Classroom dataset '{CLASSROOM_DATASET}': scoped blocks {before} -> {len(self._blocks_df)}"
+                f"{scope_tag}: scoped blocks {before} -> {len(self._blocks_df)}"
             )
 
         if metrics_path.exists():
             self._metrics_lazy = pl.scan_parquet(metrics_path)
-            if CLASSROOM_DATASET is not None and self._labels_df is not None:
+            if (
+                CLASSROOM_DATASET is not None or BALANCED_PER_LABEL is not None
+            ) and self._labels_df is not None:
                 scoped_ids = self._labels_df["block_id"].unique().to_list()
                 self._metrics_lazy = self._metrics_lazy.filter(
                     pl.col("block_id").is_in(scoped_ids)
